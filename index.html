@@ -202,6 +202,9 @@ select{width:100%;border:1px solid #b7bdc9;border-radius:10px;padding:10px 12px;
 #topnote{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:8;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(440px,92%)}
 .note{background:#2f3239f2;border:1px solid var(--d3);border-radius:14px;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:14px;box-shadow:0 8px 30px #0006;width:100%}
 .note .g{flex:1;overflow:hidden;text-overflow:ellipsis}
+.note .gs{display:block;font-size:12px;color:#b9bdc9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note .avs{display:flex;flex:none}.note .avs>*{margin-left:-10px;box-shadow:0 0 0 2px #2f3239;border-radius:50%}.note .avs>:first-child{margin-left:0}
+@media(max-width:560px){#topnote .note:has(.avs){flex-wrap:wrap}#topnote .note:has(.avs) .g{flex-basis:calc(100% - 50px)}}
 .note.rec{background:#5a1f22;border-color:#a33}
 .note.net{background:#4a3a14;border-color:#8a6a1f}
 .dot{width:10px;height:10px;border-radius:50%;background:#ff4d4f;animation:blink 1.2s infinite;flex:none}
@@ -355,8 +358,8 @@ select{width:100%;border:1px solid #b7bdc9;border-radius:10px;padding:10px 12px;
 #pop button.danger{color:var(--bad)}
 #pop hr{margin:4px 0;max-width:none}
 #pop .ck{margin-left:auto;color:var(--pri)}
-#pop .emo{display:flex;gap:2px}
-#pop .emo button{width:48px;font-size:26px;justify-content:center;padding:6px}
+#pop .emo{display:flex;gap:2px;width:100%}
+#pop .emo button{flex:1 1 0;width:auto;min-width:0;font-size:clamp(20px,6vw,26px);justify-content:center;padding:6px 0}
 #toasts{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
 .toast{background:#202124;color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;box-shadow:0 6px 20px #0006;animation:tin .25s both;max-width:90vw}
 .toast.out{opacity:0;transition:opacity .3s}
@@ -1369,7 +1372,7 @@ $('spkTest').onclick=()=>{
   o.connect(g);g.connect(d);o.start(t);o.stop(t+1);
   const a=new Audio();a.srcObject=d.stream;sink(a);a.play().catch(()=>{});
 };
-function chime(){try{const ac=AC(),o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(1175,t+.12);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.12,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.4);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.45)}catch(e){}}
+let _chT=0;function chime(){const n=Date.now();if(n-_chT<4000)return;_chT=n;try{const ac=AC(),o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(1175,t+.12);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.12,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+.4);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.45)}catch(e){}}
 
 /* ---------- background effects ---------- */
 const BG_CDN='https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/';
@@ -1794,7 +1797,7 @@ const opus=sdp=>sdp.replace(/(a=fmtp:\d+ [^\r\n]*minptime=10[^\r\n]*)/g,l=>/used
 function resetS(){
   Object.assign(S,{active:true,opened:false,owner:'',hid:'',phase:'seek',peer:null,deskPeer:null,code:'',creator:false,gen:1,seekGen:1,deskId:null,peers:{},early:{},earlyCalls:{},
     hosts:new Set(),order:[],lobby:{},lobbyV:[],devOf:{},reps:{},banned:new Set(),
-    settings:{ask:true,share:true,chat:true,react:true,unmute:true,record:false,locked:false,cam:true,wbw:false},
+    settings:{ask:true,share:true,chat:true,react:true,unmute:true,record:false,locked:false,cam:true,wbs:false,wbw:false},
     stream:null,screen:null,screenCalls:{},micOn:true,camOn:true,hasMic:false,hasCam:false,hand:0,tier:0,bad:0,good:0,
     startedAt:0,layout:'auto',pinned:null,spot:null,page:0,chat:[],unread:0,panel:null,recorder:null,rec:{},activeSpk:null,activeSince:0,
     lastSpoke:{},knock:null,stopMe:null,timers:[],dummyA:false,dummyV:false,left:false,closing:false,recChunks:[],recCtx:null,recDest:null,recSrc:{}});
@@ -1946,7 +1949,7 @@ function adopt(id,conn){
   conn.on('close',()=>{if(p.conn===conn)dropPeer(id)});
   if(conn.open)sendHi(conn);else conn.on('open',()=>sendHi(conn));
 }
-function sendHi(conn){try{conn.send({t:'hi',st:myState()});if(WB.open)conn.send({t:'wb',a:'full',pages:WB.pages})}catch(e){}}
+function sendHi(conn){try{conn.send({t:'hi',st:myState()});if(WB.open)conn.send({t:'wb',a:'full',pages:WB.pages,own:WB.owner})}catch(e){}}
 function connectTo(id){
   const p=S.peers[id];if(!p)return;
   const conn=S.peer.connect(id,{reliable:true});conn._m=true;p.conn=conn;
@@ -1991,6 +1994,7 @@ function dropPeer(id,silent){
   if(!S.active||S.closing)return; /* we are leaving: closing our own connections must not look like everyone else left */
   const p=S.peers[id];if(!p)return;
   delete S.peers[id];
+  if(WB.owner===id){WB.owner=null;if(WB.open){wbClose(false);toast('The whiteboard presenter left')}}
   try{p.call&&p.call.close()}catch(e){}try{p.scrCall&&p.scrCall.close()}catch(e){}try{p.conn&&p.conn.close()}catch(e){}
   if(p.stopW)p.stopW();p.audio.srcObject=null;p.audio.remove();if(p.scrAudio)p.scrAudio.srcObject=null;
   if(S.screenCalls[id]){try{S.screenCalls[id].close()}catch(e){}delete S.screenCalls[id]}
@@ -2072,6 +2076,10 @@ function onMsg(from,m){
 }
 function applySettingsEffects(){
   if(camLocked()&&S.camOn){enforceCam();toast('The host turned off cameras for participants',4500)}
+  if(WB.owner&&!isHost(WB.owner)&&!S.settings.wbs){
+    const mine=wbMine();WB.owner=null;if(WB.open)wbClose(false);else renderBar();
+    toast(mine?'A host turned off whiteboard sharing':'The whiteboard presentation was stopped by the host');
+  }
   wbPermSync();
   if(!S.settings.share){
     Object.values(S.peers).forEach(p=>{if(p.scrCall&&!isHost(p.id)){try{p.scrCall.close()}catch(e){}p.screen=null;p.scrCall=null}});
@@ -2575,15 +2583,17 @@ function renderBadges(){
   if(!navigator.onLine)h+=`<div class="note net">${ico('signal',20)}<span class="g"><b>You’re offline.</b> Reconnecting…</span></div>`;else if(tierEff()<3&&(S.tier>0||S.rtt>.5||S.loss>.05))h+=`<div class="note net">${ico('signal',20)}<span class="g"><b>Unstable connection</b> · ${Math.round((S.rtt||0)*1000)} ms · ${Math.round((S.loss||0)*100)}% loss${S.tier>0?' — video quality lowered to keep audio clear':''}</span></div>`;
   if(tierEff()>=3)h+=`<div class="note net">${ico('signal',20)}<span class="g">${PREF.q==='audio'?'Audio-only mode is on':'Weak connection: video paused to keep audio clear'}</span></div>`;
   if(meHost()&&S.lobbyV.length){
-    S.lobbyV.slice(0,3).forEach(e=>{h+=`<div class="note">${av(e,32)}<span class="g"><b>${esc(e.email)}</b> wants to join</span><button class="sm deny" data-deny="${e.id}">Deny</button><button class="sm pri" data-admit="${e.id}">Admit</button></div>`});
-    if(S.lobbyV.length>3)h+=`<div class="note"><span class="g">+${S.lobbyV.length-3} more waiting</span><button class="sm" data-view="people">View all</button></div>`;
+    const L=S.lobbyV;
+    if(L.length===1){const e=L[0];h+=`<div class="note">${av(e,32)}<span class="g"><b>${esc(e.email)}</b> wants to join</span><button class="sm deny" data-deny="${e.id}">Deny</button><button class="sm pri" data-admit="${e.id}">Admit</button></div>`}
+    else{const nm=L.slice(0,2).map(e=>'<b>'+esc(e.email)+'</b>').join(', '),more=L.length-2;
+      h+=`<div class="note"><span class="avs">${L.slice(0,3).map(e=>av(e,30)).join('')}</span><span class="g"><b>${L.length} people</b> want to join<small class="gs">${nm}${more>0?' and '+more+' other'+(more>1?'s':''):''}</small></span><button class="sm" data-view="people">Review</button><button class="sm deny" data-denyall="1">Deny all</button><button class="sm pri" data-admitall="1">Admit all</button></div>`}
   }
   if(DK.show)h+=`<div class="note"><span class="g">Your video looks dark. Turn on Light mode?</span><button class="sm" data-dk="x">No thanks</button><button class="sm pri" data-dk="on">Turn on</button></div>`;
   n.innerHTML=h;
 }
 $('topnote').addEventListener('click',e=>{
   const t=e.target.closest('button');if(!t)return;
-  if(t.dataset.admit)decide(t.dataset.admit,true);else if(t.dataset.deny)decide(t.dataset.deny,false);else if(t.dataset.view)openPanel('people');else if(t.dataset.dk)darkAct(t.dataset.dk);
+  if(t.dataset.admitall)S.lobbyV.slice().forEach(e=>decide(e.id,true));else if(t.dataset.denyall)S.lobbyV.slice().forEach(e=>decide(e.id,false));else if(t.dataset.admit)decide(t.dataset.admit,true);else if(t.dataset.deny)decide(t.dataset.deny,false);else if(t.dataset.view)openPanel('people');else if(t.dataset.dk)darkAct(t.dataset.dk);
 });
 
 /* bottom bar */
@@ -2643,7 +2653,7 @@ $('bCamM').onclick=()=>devMenu($('bCamM'),$('sbCam'),'v');
 $('bMic').onclick=toggleMic;
 $('bCam').onclick=()=>setCam(!S.camOn);
 $('bHand').onclick=toggleHand;
-$('bShare').onclick=e=>{const it=[{icon:'present',label:S.screen?'Stop sharing screen':'Share screen',fn:startShare},{icon:'board',label:WB.open?'Hide whiteboard':'Whiteboard – write & draw together',fn:wbToggle}];if(WB.open&&meHost())it.push({icon:'close',label:'Close whiteboard for everyone',fn:()=>wbClose(true)});popMenu(e.currentTarget,it,true)};
+$('bShare').onclick=e=>{const it=[{icon:'present',label:S.screen?'Stop sharing screen':'Share screen',fn:startShare},{icon:'board',label:WB.open?(wbMine()?'Stop presenting whiteboard':'Hide whiteboard'):WB.owner?'Show whiteboard':'Present whiteboard',fn:wbToggle}];if(WB.open&&meHost()&&!wbMine())it.push({icon:'close',label:'Close whiteboard for everyone',fn:()=>wbClose(true)});popMenu(e.currentTarget,it,true)};
 $('bRec').onclick=()=>{if(S.recorder)return stopRecording();if(!canRecord())return toast('The host hasn’t allowed participants to record');startRecording()};
 $('bEmo').onclick=e=>{
   const p=$('pop');p.innerHTML='<div class="emo"></div>';
@@ -2774,7 +2784,7 @@ function renderPanel(){
 function panelPeople(){
   const b=$('pBody'),hv=meHost();let h='';
   if(hv&&S.lobbyV.length){
-    h+=`<div class="sec"><div class="sh"><b>Waiting to join (${S.lobbyV.length})</b><button class="lnk" data-act="admitAll">Admit all</button></div>`;
+    h+=`<div class="sec"><div class="sh"><b>Waiting to join (${S.lobbyV.length})</b><span style="display:flex;gap:14px"><button class="lnk" data-act="denyAll">Deny all</button><button class="lnk" data-act="admitAll">Admit all</button></span></div>`;
     S.lobbyV.forEach(e=>{h+=`<div class="row">${av(e,36)}<div class="rn">${esc(e.email)}</div><button class="sm deny" data-deny="${e.id}">Deny</button><button class="sm pri" data-admit="${e.id}">Admit</button></div>`});
     h+='</div>';
   }
@@ -2803,7 +2813,8 @@ function panelHost(){
    sw('react','Participants can send reactions','')+
    sw('unmute','Participants can unmute themselves','')+
    sw('cam','Participants can use their camera','Turn off to switch every participant’s video off. They can’t turn it back on. Hosts are not affected.')+
-   sw('wbw','Participants can write on the whiteboard','Off by default. Participants can still watch the board.')+
+   sw('wbs','Participants can share whiteboard','Off by default. Works like screen sharing: they present a board for everyone. The person presenting can always write on it.')+
+   sw('wbw','Participants can write on the whiteboard','Off by default. Lets participants write on a board someone else is presenting. Hosts can always write on every board.')+
    sw('record','Participants can record','Hosts can always record. Everyone is notified.')+
    `<div class="act"><button class="btn" data-act="muteAll">${ico('micoff',20)}Mute everyone</button><button class="btn" data-act="camOffAll">${ico('camoff',20)}Turn off everyone’s video</button><button class="btn" data-act="lowerAll">${handIco(20)}Lower all hands</button><button class="btn danger" data-act="removeAll">${ico('close',20)}Remove everyone else</button><button class="btn danger" data-act="endAll">${ico('end',20)}End meeting for everyone</button></div>`;
 }
@@ -2837,6 +2848,7 @@ $('pBody').addEventListener('click',e=>{
     if(id!=='me'&&id!==myId()&&S.peers[id])items.push('-',{icon:'shield',label:'Report',fn:()=>reportDlg(id)});return popMenu(t,items);}
   switch(t.dataset.act){
     case'admitAll':S.lobbyV.slice().forEach(e=>decide(e.id,true));break;
+    case'denyAll':S.lobbyV.slice().forEach(e=>decide(e.id,false));break;
     case'muteAll':bc({t:'mute',all:true});toast('Muted everyone');break;case'camOffAll':bc({t:'camoff',all:true});toast('Turned off everyone’s video');break;
     case'lowerAll':bc({t:'lower',all:true});if(S.hand){S.hand=0;pushState()}renderSoon();break;
     case'endAll':if(confirm('End this meeting for everyone?'))endForAll();break;
@@ -2930,7 +2942,7 @@ setInterval(()=>{
 /* =====================================================================
    WHITEBOARD (collaborative, over the same peer connections)
    ===================================================================== */
-const WB={z:1,open:false,touched:false,pages:[{bg:'none',st:[],ob:[]}],pi:0,mode:'pen',c:'#1f2328',w:4,sel:[],bbox:null,s:1,built:false,hist:[],redo:[],rng:null};
+const WB={z:1,open:false,touched:false,pages:[{bg:'none',st:[],ob:[]}],pi:0,mode:'pen',c:'#1f2328',w:4,sel:[],bbox:null,s:1,built:false,hist:[],redo:[],rng:null,owner:null};
 const WBG={none:['none','auto'],ruled:['repeating-linear-gradient(transparent 0 35px,#cdd6f6 35px 36px)','auto'],grid:['linear-gradient(#e1e6f5 1px,transparent 1px),linear-gradient(90deg,#e1e6f5 1px,transparent 1px)','32px 32px'],dots:['radial-gradient(#b9c0d8 1.5px,transparent 1.7px)','28px 28px']};
 const wbPg=()=>WB.pages[WB.pi],wbSend=m=>{if(wbCan())bc(Object.assign({t:'wb'},m))},WID=()=>Math.random().toString(36).slice(2,9);
 const num=(v,a,b,d)=>{v=+v;return isFinite(v)?Math.min(b,Math.max(a,v)):d},cid=v=>String(v).replace(/[^\w-]/g,'').slice(0,12);
@@ -2967,17 +2979,29 @@ function vidKick(){
   renderSoon();setTimeout(()=>{sendWants();applySenders();paintAll()},120);
 }
 function vidKickSoon(){[80,420,1100,2400].forEach(t=>setTimeout(()=>{try{vidKick()}catch(e){}},t))}
-function wbOpen(remote){
-  const was=WB.open;if(!WB.built)wbBuild();WB._can=wbCan();WB.open=true;WB.touched=true;{const w=$('wb'),wasHid=w.classList.contains('hide');w._closing=false;clearTimeout(w._ct);wbLay();w.classList.remove('hide','animOut');if(wasHid){w.classList.remove('animIn');void w.offsetWidth;w.classList.add('animIn');clearTimeout(w._at);w._at=setTimeout(()=>w.classList.remove('animIn'),560)}}wbFit();wbRender();
+function wbOpen(remote,owner){
+  const was=WB.open;if(owner)WB.owner=owner;else if(!remote)WB.owner=myId();if(!WB.built)wbBuild();WB._can=wbCan();WB.open=true;WB.touched=true;{const w=$('wb'),wasHid=w.classList.contains('hide');w._closing=false;clearTimeout(w._ct);wbLay();w.classList.remove('hide','animOut');if(wasHid){w.classList.remove('animIn');void w.offsetWidth;w.classList.add('animIn');clearTimeout(w._at);w._at=setTimeout(()=>w.classList.remove('animIn'),560)}}wbFit();wbRender();
   if(!remote&&!was)wbSend({a:'open'});renderBar();renderSoon();setTimeout(wbFit,230);vidKickSoon();
 }
-function wbClose(all){
-  WB.open=false;const w=$('wb');if(all)wbSend({a:'close'});
-  w._closing=true;wbLay();clearTimeout(w._at);w.classList.remove('animIn');void w.offsetWidth;w.classList.add('animOut');
-  clearTimeout(w._ct);w._ct=setTimeout(()=>{w._closing=false;w.classList.remove('animOut');w.classList.add('hide');wbLay();renderSoon();vidKickSoon()},340);
-  renderBar();renderSoon();vidKickSoon();
+function wbFinishClose(){
+  const w=$('wb');if(!w||WB.open)return; /* reopened meanwhile */
+  clearTimeout(w._ct);clearTimeout(w._at);w._closing=false;w.classList.remove('animIn','animOut');w.classList.add('hide');
+  wbLay();renderSoon();vidKickSoon();
 }
-function wbReset(){WB.open=false;WB.touched=false;setTimeout(()=>{try{wbLay()}catch(e){}},0);WB.pages=[{bg:'none',st:[],ob:[]}];WB.pi=0;WB.sel=[];WB.bbox=null;WB.hist=[];WB.redo=[];WB.rng=null;if(WB.built){$('wb').classList.add('hide');$('wbPage').querySelectorAll('.wo').forEach(e=>e.remove())}}
+function wbClose(all){
+  const w=$('wb');if(all)wbSend({a:'close'});
+  WB.open=false;if(all)WB.owner=null;
+  if(!w)return;
+  const quick=w.classList.contains('hide')||matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(quick){wbFinishClose()}
+  else{
+    w._closing=true;wbLay();clearTimeout(w._at);w.classList.remove('animIn');void w.offsetWidth;w.classList.add('animOut');
+    clearTimeout(w._ct);w._ct=setTimeout(wbFinishClose,340);
+  }
+  renderBar();renderSoon();
+  setTimeout(wbFinishClose,700); /* safety net: never stay stuck on the board */
+}
+function wbReset(){WB.open=false;WB.owner=null;WB.touched=false;setTimeout(()=>{try{wbLay()}catch(e){}},0);WB.pages=[{bg:'none',st:[],ob:[]}];WB.pi=0;WB.sel=[];WB.bbox=null;WB.hist=[];WB.redo=[];WB.rng=null;if(WB.built){$('wb').classList.add('hide');$('wbPage').querySelectorAll('.wo').forEach(e=>e.remove())}}
 function wbFit_OLD(){const a=$('wbArea');if(!a)return;const s=Math.max(.15,Math.min((a.clientWidth-16)/1280,1.5))*(WB.z||1);WB.s=s;$('wbBox').style.cssText='width:'+1280*s+'px;height:'+720*s+'px';$('wbPage').style.transform='scale('+s+')';$('wbPage').style.setProperty('--k',String(1/s));const l=$('wbZl');if(l)l.textContent=Math.round((WB.z||1)*100)+'%';wbObjBar()}
 
 function wbBuild(){
@@ -2994,9 +3018,9 @@ function wbBuild(){
    clr=(id,ic,t,v)=>`<label class="sbtn clr" title="${t}">${wi(ic,20)}<i id="${id}b" style="background:${v}"></i><input type="color" id="${id}" value="${v}" aria-label="${t}"></label>`,
    sws=['#1f2328','#e5484d','#f5a524','#1fa971','#12b8d6','#5b5bf0','#a855f7','#8a5a2b'].map(c=>`<button class="sw1" data-sw="${c}" style="background:${c}" aria-label="${c}"></button>`).join('');
   const w=$('wb');
-  w.innerHTML=`<div class="wtop"><span style="display:flex">${wi('board',22)}</span><b>Whiteboard</b><span class="chip">View only</span><span class="sp"></span><button class="wx" id="wbPgBtn" title="Page size and orientation">${wi('file',18)}Page</button><button class="wx" id="wbSave" title="Save the board">${wi('save',18)}Save</button><button class="wx" id="wbX" title="Hide the whiteboard (it stays open for others)">${wi('close',18)}Hide</button></div>
+  w.innerHTML=`<div class="wtop"><span style="display:flex">${wi('board',22)}</span><b>Whiteboard</b><span class="chip">View only</span><span class="sp"></span><button class="wx" id="wbPgBtn" title="Page size and orientation">${wi('file',18)}Page</button><button class="wx" id="wbSave" title="Save the board">${wi('save',18)}Save</button><button class="wx" id="wbX" title="Hide the whiteboard (it stays open for others)">${wi('close',18)}<span id="wbXt">Hide</span></button></div>
   <div class="rtabs"><button data-tab="home" class="on">Home</button><button data-tab="insert">Insert</button><button data-tab="draw">Draw</button><button data-tab="layout">Layout</button></div>
-  <div class="wro">View only – the host hasn’t allowed participants to write on the whiteboard.</div>
+  <div class="wro">View only – you can write once the host allows it.</div>
   <div class="rib">
    <div class="rp on" data-p="home">
     ${grp(big('id="wbUn"','undo','Undo','Undo last drawing (Ctrl+Z)')+big('id="wbDel"','del','Delete','Delete the selected item'),'Edit')}
@@ -3044,7 +3068,7 @@ function wbBuild(){
     if(id==='wbSave'){$('wbSaveM').classList.toggle('hide');return}
     if(d.sv){$('wbSaveM').classList.add('hide');wbSaveAs(d.sv);return}
     if(d.tab){if(matchMedia('(max-width:720px)').matches)w.classList.toggle('ribOn',!(WB.tab===d.tab&&w.classList.contains('ribOn')));return wbTab(d.tab)}
-    if(id==='wbX')return wbClose(false);
+    if(id==='wbX')return wbClose(wbMine());
     if(d.pg){if(d.pg==='new'){if(wbCan())wbNewPage()}else wbGo(d.pg==='next'?1:-1);return}
     if(d.z){wbZoom(d.z==='fit'?1:WB.z*(d.z==='+'?1.25:.8));return}
     if(id==='wbDockBtn'){const dk=$('wbDock'),o=dk.classList.toggle('open');b.setAttribute('aria-expanded',o);return}
@@ -3105,7 +3129,7 @@ function wbUI(){
     const fam=cs.fontFamily.split(',')[0].replace(/["']/g,'').trim().toLowerCase(),fo=[...$('wbFn').options].find(o=>o.value.toLowerCase()===fam);if(fo)$('wbFn').value=fo.value}catch(e){}}
   $('wbCv').style.pointerEvents=(WB.mode==='text'||WB.mode==='mv')?'none':'auto';$('wbCv').style.cursor=WB.mode==='era'?'cell':WB.mode==='sel'?'crosshair':'default';
   w.querySelectorAll('[data-w]').forEach(b=>b.classList.toggle('on',+b.dataset.w===WB.w));
-  w.classList.toggle('ro',!wbCan());
+  w.classList.toggle('ro',!wbCan());{const xt=$('wbXt'),x=$('wbX');if(xt){xt.textContent=wbMine()?'Stop':'Hide';x.title=wbMine()?'Stop presenting – returns everyone to video':'Hide the whiteboard (it stays open for others)'}}
 }
 function wbBgCss(p){const th=p.th||2,sp=p.sp||32,c=p.lc||'#bcc5e6';
   if(p.bg==='ruled')return[`repeating-linear-gradient(transparent 0 ${sp-th}px,${c} ${sp-th}px ${sp}px)`,'auto'];
@@ -3377,7 +3401,7 @@ Object.assign(WI,{
  arrow:'<path d="M4 20L19 5"/><path d="M9 5h10v10"/>',
  tri:'<path d="M12 4L21 20H3z"/>'});
 const wi=(k,s)=>{const p=WI[k]||IC[k]||'';if(p[0]==='<')return `<svg viewBox="0 0 24 24" width="${s||22}" height="${s||22}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;return `<svg viewBox="0 0 24 24" width="${s||22}" height="${s||22}" fill="currentColor" aria-hidden="true"><path d="${p}"/></svg>`};
-const wbCan=()=>meHost()||!!(S.settings&&S.settings.wbw);
+const wbCan=()=>meHost()||!!(S.settings&&S.settings.wbw)||(!!WB.owner&&WB.owner===myId());
 function wbPermSync(){
   if(!WB.built)return;const c=wbCan();
   if(WB._can!==c){const first=WB._can===undefined;WB._can=c;if(WB.open){wbRender();if(!first)toast(c?'The host allowed you to write on the whiteboard':'The host turned off whiteboard writing – you can still watch')}}
@@ -3392,9 +3416,12 @@ function wbBarSetup(){
     if(k==='pat'){wbSnap();o.pat=t.value;if(o.pat&&!o.th)o.th=2}else if(k==='th')o.th=+t.value;else if(k==='sp')o.sp=+t.value;else if(k==='lc')o.lc=t.value;else return;
     const el=wbEl(o.id);if(el){wbStyle(el,o);wbSync(o,el,WB.pi)}if(k==='pat'){bar._id=null;wbObjBar()}});
 }
+const wbMine=()=>!!WB.owner&&WB.owner===myId();
+const wbActive=()=>!!WB.owner||WB.open;
 function wbToggle(){
-  if(WB.open)return wbClose(false);
-  if(!wbCan()&&!WB.touched)return toast('Only hosts can start the whiteboard until they allow participants to write');
+  if(WB.open)return wbClose(wbMine()); /* the presenter stopping the board closes it for everyone; viewers just hide it */
+  if(WB.owner)return wbOpen(true); /* a board is running – show it again (no broadcast) */
+  if(!meHost()&&!S.settings.wbs)return toast('The host hasn’t allowed participants to share the whiteboard');
   wbOpen();
 }
 function wbTab(n){WB.tab=n;const w=$('wb');w.querySelectorAll('.rtabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));w.querySelectorAll('.rp').forEach(p=>p.classList.toggle('on',p.dataset.p===n))}
@@ -3412,14 +3439,16 @@ function wbFontPx(px){
 /* incoming whiteboard messages (everything is validated before use) */
 function onWb(from,m){
   if(!m||typeof m!=='object')return;
-  if(!(isHost(from)||S.settings.wbw))return; /* participants can only write when the host allows it */
+  /* who may send: hosts; the person presenting the board; anyone while the host allows writing; a participant may only START a board when sharing is allowed */
+  if(m.a==='open'){if(!isHost(from)&&!S.settings.wbs)return;if(WB.owner&&WB.owner!==from&&!isHost(from))return}
+  else if(!(isHost(from)||(WB.owner&&from===WB.owner)||S.settings.wbw||(m.a==='full'&&from===m.own&&S.settings.wbs)))return;
   const pi=num(m.pg,0,59,0),nm=S.peers[from]?S.peers[from].email:'Someone',pg=()=>WB.pages[pi];
   switch(m.a){
-    case'open':wbOpen(true);toast(nm+' opened the whiteboard');break;
-    case'close':if(isHost(from)&&WB.open){wbClose(false);toast('The host closed the whiteboard')}break;
+    case'open':wbOpen(true,from);toast(nm+' is presenting the whiteboard');break;
+    case'close':if(isHost(from)||from===WB.owner){const was=WB.open;WB.owner=null;if(was){wbClose(false);toast(isHost(from)?'The host closed the whiteboard':nm+' stopped presenting the whiteboard')}else{renderBar()}}break;
     case'full':{if(WB.open||WB.touched||!Array.isArray(m.pages))break;
       const pgs=m.pages.slice(0,60).map(wbSanP);
-      if(pgs.length){WB.pages=pgs;WB.pi=0;wbOpen(true)}break}
+      if(pgs.length){WB.pages=pgs;WB.pi=0;wbOpen(true,(typeof m.own==='string'&&(isHost(m.own)||S.peers[m.own]))?m.own:from)}break}
     case'pg':if(WB.pages.length<60){WB.pages.push({bg:WBG[m.bg]?m.bg:'none',th:num(m.th,1,12,2),sp:num(m.sp,12,120,32),w:num(m.w,200,3400,1280),h:num(m.h,200,3400,720),sz:String(m.sz||'169').replace(/[^\w]/g,'').slice(0,10),st:[],ob:[]});WB.touched=true;if(WB.built)wbInfo()}break;
     case'add':{const p=wbPageAt(pi);if(!p)break;WB.touched=true;
       if(m.s){const s=wbSanS(m.s);if(s)p.st.push(s)}
@@ -3433,7 +3462,7 @@ function onWb(from,m){
     case'clr':{const p=pg();if(p){p.st=[];p.ob=[];if(WB.built&&p===wbPg()){WB.sel=[];WB.bbox=null;wbRender()}}break}
     case'size':{const zz=String(m.sz||'').replace(/[^\w]/g,'').slice(0,10),w=num(m.w,200,3400,1280),h=num(m.h,200,3400,720);(m.all?WB.pages:[pg()]).forEach(p=>p&&(p.w=w,p.h=h,p.sz=zz));if(WB.built&&WB.open)wbRender();break}
     case'setpg':{const p=wbPageAt(pi);if(!p)break;Object.assign(p,wbSanP(m));WB.touched=true;if(WB.built&&p===wbPg()){WB.sel=[];WB.bbox=null;WB.so=null;wbRender()}break}
-    case'load':{if(!Array.isArray(m.pages))break;const pgs=m.pages.slice(0,60).map(wbSanP);if(pgs.length){WB.pages=pgs;WB.pi=0;WB.touched=true;WB.hist=[];WB.redo=[];WB.sel=[];WB.bbox=null;WB.so=null;if(WB.built&&WB.open)wbRender();else wbOpen(true)}break}
+    case'load':{if(!Array.isArray(m.pages))break;const pgs=m.pages.slice(0,60).map(wbSanP);if(pgs.length){WB.pages=pgs;WB.pi=0;WB.touched=true;WB.hist=[];WB.redo=[];WB.sel=[];WB.bbox=null;WB.so=null;if(WB.built&&WB.open)wbRender();else wbOpen(true,WB.owner||from)}break}
     case'bg':if(WBG[m.bg]){(m.all?WB.pages:[pg()]).forEach(p=>p&&(p.bg=m.bg,p.th=num(m.th,1,12,2),p.sp=num(m.sp,12,120,32),p.lc=/^#[0-9a-f]{6}$/i.test(m.lc||'')?m.lc:'#bcc5e6'));if(WB.built)wbBgPaint()}break;
   }
 }
