@@ -635,6 +635,100 @@ select{width:100%;border:1px solid #b7bdc9;border-radius:10px;padding:10px 12px;
   #panel.swap>header h3,#panel.swap>#pBody{animation:none}
 }
 
+
+/* ===== smooth everything: page changes, popups, dialogs, buttons ===== */
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@keyframes viewIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes viewFade{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+section.view:not(.hide){animation:viewIn .45s cubic-bezier(.22,.8,.24,1) both}
+#call:not(.hide){animation:viewFade .5s ease both}
+#pop:not(.hide){animation:popIn .18s cubic-bezier(.22,.8,.24,1) both;transform-origin:50% 100%}
+.menu:not(.hide){animation:popIn .18s cubic-bezier(.22,.8,.24,1) both;transform-origin:0 0}
+.modal:not(.hide){animation:fadeIn .25s ease both}
+.modal:not(.hide)>.card{animation:cardIn .35s cubic-bezier(.22,.8,.24,1) both}
+.btn,.sm,.lnk,.x,.rbtn,.sbtn,.menu button,#pop button,.tg,.fxSw,.bgt,.dk,.dbtn,.rtabs button,#wbSaveM button,#pg button,.tmenu{transition:background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .18s cubic-bezier(.22,.8,.24,1),opacity .2s ease,filter .2s}
+.btn:active,.sm:active,.rbtn:active,.dk:active,.dbtn:active{transform:scale(.96)}
+.cb{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease,opacity .2s ease}
+#wb .rib{animation:fadeIn .2s ease}
+.rp.on{animation:fadeIn .22s ease}
+#wb.ribOn .rib{animation:ribDown .28s cubic-bezier(.22,.8,.24,1)}
+@keyframes ribDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.tile{transition:box-shadow .15s,opacity .3s ease}
+@media(prefers-reduced-motion:reduce){section.view:not(.hide),#call:not(.hide),#pop:not(.hide),.menu:not(.hide),.modal:not(.hide),.modal:not(.hide)>.card,#wb .rib,.rp.on{animation:none}html{scroll-behavior:auto}}
+
+/* ===== mobile "More" sheet (Meet / Zoom style) ===== */
+#msheet{position:fixed;inset:0;z-index:65;display:none}
+#msheet.show{display:block}
+#msheet .msBack{position:absolute;inset:0;background:#0008;animation:fadeIn .25s ease both}
+#msheet .msBox{position:absolute;left:0;right:0;bottom:0;background:#202124;color:#e8eaed;border-radius:22px 22px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom));max-height:82vh;overflow-y:auto;animation:sheetUp .34s cubic-bezier(.22,.8,.24,1) both;transition:transform .26s cubic-bezier(.4,0,.6,1)}
+#msheet.closing .msBox{transform:translateY(105%)}
+#msheet.closing .msBack{opacity:0;transition:opacity .26s}
+#msheet .msGrip{width:40px;height:4px;border-radius:2px;background:#5f6368;margin:2px auto 12px}
+#msheet .msEmo{display:flex;justify-content:space-between;gap:4px;padding:6px 2px 14px;border-bottom:1px solid #ffffff1a;margin-bottom:12px}
+#msheet .msEmo button{flex:1;font-size:27px;line-height:1;padding:8px 0;border:0;background:none;border-radius:12px}
+#msheet .msEmo button:active{background:#ffffff1f;transform:scale(1.2)}
+#msheet .msGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#msheet .msI{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 2px 10px;border:0;background:none;color:#e8eaed;border-radius:14px;font-size:12px;line-height:1.2;text-align:center}
+#msheet .msI:active{background:#ffffff1a}
+#msheet .msI .ic{width:48px;height:48px;border-radius:50%;background:#3c4043;display:grid;place-items:center;transition:background-color .2s}
+#msheet .msI.on .ic{background:#a8c7fa;color:#062e6f}
+#msheet .msI.rec .ic{background:#d93025;color:#fff}
+#msheet .msI.dis{opacity:.45}
+@media(min-width:641px){#msheet{display:none!important}}
+
+/* ===== phone call bar: icon + label, one clean row ===== */
+@media(max-width:640px){
+  #bar{display:flex;align-items:flex-start;justify-content:space-between;gap:0;padding:6px 4px calc(8px + env(safe-area-inset-bottom));min-height:0;background:#15161a;border-top:1px solid #ffffff12}
+  #bar .bl{display:none}
+  #bar .bc,#bar .br{display:contents}
+  #bEmo,#bCC,#bHand,#bFx,#bRec,#bInfo,#bHost{display:none!important}
+  #sbMic{order:1}#sbCam{order:2}#bShare{order:3}#bPeople{order:4}#bChat{order:5}#bMore{order:6}#bLeave{order:7}
+  #bar .cb,#bar .sb .cb{flex:1 1 0;min-width:0;width:auto;height:54px;flex-direction:column;gap:4px;padding:4px 0 0;border-radius:12px;background:transparent;color:#dfe1e5;-webkit-tap-highlight-color:transparent}
+  #bar .cb::after{content:attr(data-lbl);font-size:10.5px;font-weight:500;line-height:1;white-space:nowrap;letter-spacing:.01em}
+  #bar .cb svg{width:24px;height:24px}
+  #bar .cb:hover{background:transparent}
+  #bar .cb:active{background:#ffffff16}
+  #bar .sb{flex:1 1 0;min-width:0;height:54px;background:transparent!important;border-radius:12px;overflow:visible}
+  #bar .sb .mlv{display:none}
+  #bar .sb.off .cb{color:#ff7b72}
+  #bar .sb.lock{opacity:.5}
+  #bar .cb.on,#bar .cb.ib.on{background:transparent;color:#8ab4f8}
+  #bar .cb .bd{top:0;right:calc(50% - 25px);min-width:17px;height:17px;font-size:10.5px;background:#5f6368}
+  #bar .cb.on .bd{background:#8ab4f8;color:#062e6f}
+  #bar .cb.end{flex:0 0 auto;width:auto;min-width:86px;height:44px;margin:5px 6px 0 6px;padding:0 16px;flex-direction:row;gap:8px;border-radius:22px;background:#ea4335;color:#fff}
+  #bar .cb.end::after{content:'Leave';font-size:13px;font-weight:600}
+  #bar .cb.end svg{width:22px;height:22px}
+  #bar .cb.end:active{background:#c5352a}
+  #stage{inset:6px 6px calc(4px + var(--cch,0px))}
+}
+@media(max-width:380px){#bar .cb.end{min-width:56px;padding:0 14px}#bar .cb.end::after{display:none}#bar .cb::after{font-size:10px}}
+
+/* ===== whiteboard on phones: fills the screen, tools always fit ===== */
+@media(max-width:720px){
+  #stageWrap>#wb{inset:0 0 var(--cch,0px) 0;border-radius:0;box-shadow:none}
+  .wtop{padding:8px 10px 2px;gap:6px}.wtop b{font-size:15px}
+  .wtop .wx{padding:6px 10px;font-size:13px}
+  .rtabs{padding:4px 6px 0;scrollbar-width:none}.rtabs::-webkit-scrollbar{display:none}
+  .rtabs button{padding:9px 14px;font-size:14px}
+  .rib{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  #wbDock{bottom:calc(46px + 8px);width:calc(100% - 12px);max-width:none}
+  .dtray{width:100%;max-width:440px;padding:10px 8px;border-radius:20px;gap:8px;max-height:min(58vh,calc(100% - 130px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .dt{gap:2px}
+  .dk{width:40px;height:40px}
+  #wbDock .sbtn{width:30px;height:30px;min-width:30px}
+  #wbDock input[type=range]{width:min(150px,38vw)}
+  .wstat{padding:4px 8px;gap:4px 8px;font-size:12px}.wstat input[type=range]{width:80px}
+  #wbObj,#wbOb{max-width:calc(100% - 12px);overflow-x:auto}
+  #wbSaveM{right:8px;left:8px;min-width:0}
+}
+/* ===== side panels swap in place: the stage never resizes when you jump between Info / People / Chat / Host / Backgrounds ===== */
+#panel.noanim,#bgPanel.noanim,#panel.noanim.hide,#bgPanel.noanim.hide,#bgPanel.dock.noanim,#bgPanel.dock.noanim.hide{transition:none!important}
+#bgPanel.swap>.bgH h3,#bgPanel.swap>.bgBody{animation:pSwap .3s cubic-bezier(.22,.8,.24,1)}
+@media(prefers-reduced-motion:reduce){#bgPanel.swap>.bgH h3,#bgPanel.swap>.bgBody{animation:none}}
 </style>
 </head>
 <body class="pre">
@@ -1620,13 +1714,24 @@ function bgPrevSync(){
   $('bgPrevOff').classList.toggle('hide',ok);$('bgPrevMsg').textContent=has?'Camera is off':'No camera found';$('bgPrevBtn').classList.toggle('hide',!has);
   const want=ok?st:null;if(v.srcObject!==want){v.srcObject=want;if(want)v.play().catch(()=>{})}
 }
-function closeBg(){const p=$('bgPanel');if(!p)return;p.classList.add('hide');const v=$('bgPrev');if(v)v.srcObject=null}
+function closeBg(){const p=$('bgPanel');if(!p)return;const was=!p.classList.contains('hide');p.classList.add('hide');const v=$('bgPrev');if(v)setTimeout(()=>{if(p.classList.contains('hide'))v.srcObject=null},360);if(was&&S.active&&S.phase==='in')renderSoon()}
 function openBg(){
   const p=$('bgPanel');
   if(!p.classList.contains('hide'))return closeBg();
   bgPlace();buildBg();
-  if(bgLive()&&S.panel)closePanel();
-  void p.offsetWidth;bgPrevSync();p.classList.remove('hide');
+  const wide=matchMedia('(min-width:761px)').matches,swapIn=bgLive()&&!!S.panel&&wide,pn=$('panel');
+  p.classList.remove('swap');
+  if(swapIn){ /* a side panel is open: hand the same dock slot over, no width animation */
+    pn.classList.add('noanim');p.classList.add('noanim');void p.offsetWidth;
+    closePanel();p.classList.remove('hide');void p.offsetWidth;
+    p.classList.add('swap');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{pn.classList.remove('noanim');p.classList.remove('noanim')}));
+  }else{
+    if(bgLive()&&S.panel)closePanel();
+    void p.offsetWidth;p.classList.remove('hide');
+  }
+  if(bgLive())renderSoon();
+  setTimeout(bgPrevSync,140); /* start the preview video after the slide-in begins so the animation never stalls */
 }
 setInterval(()=>{const p=$('bgPanel');if(p&&!p.classList.contains('hide'))bgPrevSync()},400);
 $('bgPrevBtn').onclick=()=>{if(bgLive()){setCam(true)}else{try{$('pjCam').click()}catch(e){}}setTimeout(bgPrevSync,200)};
@@ -1916,8 +2021,16 @@ function to(id,m){const p=S.peers[id];if(p&&p.conn&&p.conn.open)try{p.conn.send(
 function bc(m){Object.values(S.peers).forEach(p=>{if(p.conn&&p.conn.open)try{p.conn.send(m)}catch(e){}})}
 function myState(){return{mic:S.micOn,cam:S.camOn&&S.hasCam,hand:S.hand,net:tierEff()>=3?'audio':tierEff()>=1?'low':'ok',share:!!S.screen,rec:!!S.recorder,cc:!!CC.on,cl:CC.lang}}
 let pst=0;function pushState(){clearTimeout(pst);pst=setTimeout(()=>bc({t:'st',st:myState()}),0)}
+function hostObey(m){
+  if(m.t==='end'){leave('The host ended the meeting for everyone.');return}
+  if(m.banned)addBan(true);else if(m.mban)addBan(false);
+  leave(m.banned?'This device has been banned from Vibeo Meet after repeated reports.':m.mban?'The host banned you from this meeting.':'A host removed you from the meeting.');
+}
 function onMsg(from,m){
-  if(!m||!S.active)return;const p=S.peers[from];if(!p)return;
+  if(!m||!S.active)return;
+  /* end / remove must work even if the sender's peer record is momentarily missing or the host list is stale (e.g. host rejoined) */
+  if(m.t==='end'||m.t==='kick'){const sp=S.peers[from];if(S.hosts.has(from)||(sp&&sp.own)||from===S.deskId&&S.hosts.size===0){hostObey(m);return}}
+  const p=S.peers[from];if(!p)return;
   const H=isHost(from);
   switch(m.t){
     case'hi':case'st':{
@@ -1943,9 +2056,9 @@ function onMsg(from,m){
     case'mute':if(H){if(m.all&&meHost())break;setMic(false);toast(m.all?'A host muted everyone':'A host muted you')}break;
     case'camoff':if(H){if(m.all&&meHost())break;setCam(false);toast(m.all?'A host turned off everyone’s video':'A host turned off your camera')}break;
     case'lower':if(H&&(m.all||m.id===myId())&&S.hand){S.hand=0;pushState();renderSoon();toast('A host lowered your hand')}break;
-    case'kick':if(H){if(m.banned)addBan(true);else if(m.mban)addBan(false);leave(m.banned?'This device has been banned from Vibeo Meet after repeated reports.':m.mban?'The host banned you from this meeting.':'A host removed you from the meeting.')}break;
+    case'kick':if(H)hostObey(m);break;
     case'ban':if(H)S.banned.add(String(m.email));break;
-    case'end':if(H)leave('The host ended the meeting for everyone.');break;
+    case'end':if(H)hostObey(m);break;
     case'spot':if(H){S.spot=m.id;renderSoon()}break;
     case'lobby':if(H){S.lobbyV=m.list;if(m.list.length)chime();renderSoon()}break;
     case'admit':if(H&&S.deskId===myId())deskDecide(m.id,true);break;
@@ -2074,29 +2187,94 @@ function stopShare(){
 
 /* ---------- recording (local, with everyone notified) ---------- */
 const canRecord=()=>meHost()||S.settings.record;
+function recCanvas(){
+  /* phones can't capture the screen, so we draw the call onto a canvas and record that */
+  const W=1280,H=720,cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
+  const vids={};let stopped=false;
+  const vidFor=(k,stream)=>{
+    if(!stream)return null;const vt=stream.getVideoTracks()[0];if(!vt)return null;
+    let r=vids[k];
+    if(!r||r.t!==vt){if(r)r.v.srcObject=null;const v=document.createElement('video');v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');v.srcObject=new MediaStream([vt]);v.play().catch(()=>{});r=vids[k]={v,t:vt}}
+    return r.v;
+  };
+  const initial=t=>String(t.name||'?').trim().charAt(0).toUpperCase()||'?';
+  const drawTile=(k,x,y,w,h,fit)=>{
+    let t;try{t=tinfo(k)}catch(e){return}
+    ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+    ctx.fillStyle='#2a2c33';ctx.fillRect(x,y,w,h);
+    const isScr=!!t.screen,show=isScr?!!t.stream:!!(t.cam&&t.net!=='audio'&&t.stream);
+    const v=show?vidFor(k,t.stream):null;
+    if(v&&v.readyState>=2&&v.videoWidth){
+      const vw=v.videoWidth,vh=v.videoHeight,sc=fit?Math.min(w/vw,h/vh):Math.max(w/vw,h/vh),dw=vw*sc,dh=vh*sc;
+      if(t.self&&!isScr){ctx.translate(x+w,y);ctx.scale(-1,1);ctx.drawImage(v,(w-dw)/2,(h-dh)/2,dw,dh)}
+      else ctx.drawImage(v,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+    }else if(!isScr){
+      const r=Math.min(w,h)*.2;ctx.fillStyle='#5b5bf0';ctx.beginPath();ctx.arc(x+w/2,y+h/2,r,0,7);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='600 '+Math.round(r*1.0)+'px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(initial(t),x+w/2,y+h/2+2);
+    }
+    ctx.restore();
+    const label=(isScr?t.name:t.name+(t.self?' (You)':''));
+    ctx.font='500 '+Math.max(14,Math.round(h*.045))+'px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
+    const fh=Math.max(14,Math.round(h*.045)),tw=Math.min(w-16,ctx.measureText(label).width+(isScr?20:t.mic===false?44:20));
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(x+8,y+h-fh-18,tw,fh+12);
+    ctx.fillStyle='#fff';ctx.fillText((!isScr&&t.mic===false?'🔇 ':'')+label,x+16,y+h-fh/2-12,tw-16);
+  };
+  const draw=()=>{
+    if(stopped)return;
+    try{
+      ctx.fillStyle='#15161a';ctx.fillRect(0,0,W,H);
+      const peerIds=S.order.filter(i=>S.peers[i]),cams=['me',...peerIds],scr=[];
+      if(S.screen)scr.push('scr:me');peerIds.forEach(i=>{if(S.peers[i].screen)scr.push('scr:'+i)});
+      const g=10;
+      if(scr.length){
+        const sw=Math.round(W*.76);drawTile(scr[0],g,g,sw-g,H-2*g,true);
+        const n=Math.min(cams.length,4),th=(H-g*(n+1))/n,tx=sw+g,tw=W-tx-g;
+        cams.slice(0,n).forEach((k,i)=>drawTile(k,tx,g+i*(th+g),tw,th,false));
+      }else{
+        const list=cams.slice(0,16),n=list.length;let best=null;
+        for(let c=1;c<=n;c++){const r=Math.ceil(n/c),tw=(W-g*(c+1))/c,th=(H-g*(r+1))/r,sc=Math.min(tw,th*16/9);if(!best||sc>best.sc)best={c,r,sc}}
+        const tw=(W-g*(best.c+1))/best.c,th=(H-g*(best.r+1))/best.r;
+        list.forEach((k,i)=>{const col=i%best.c,row=Math.floor(i/best.c),inRow=row===best.r-1?n-row*best.c:best.c,off=(best.c-inRow)*(tw+g)/2;drawTile(k,g+col*(tw+g)+(row===best.r-1?off:0),g+row*(th+g),tw,th,false)});
+      }
+    }catch(e){}
+  };
+  const timer=setInterval(draw,1000/20);draw();
+  return{stream:cv.captureStream(20),stop:()=>{stopped=true;clearInterval(timer);Object.values(vids).forEach(r=>{try{r.v.srcObject=null}catch(e){}})}};
+}
 async function startRecording(){
   if(S.recorder)return;if(!canRecord())return toast('The host hasn’t allowed recording');
-  if(!window.MediaRecorder||!navigator.mediaDevices.getDisplayMedia)return toast('Recording isn’t supported on this browser');
+  if(!window.MediaRecorder)return toast('Recording isn’t supported on this browser. Please update your browser.');
+  const desktop=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia)&&!matchMedia('(pointer:coarse)').matches;
   try{
-    toast('Choose "This tab" so the whole meeting is captured',4500);
-    const disp=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});
+    let disp=null,cvr=null,vtracks;
+    if(desktop){
+      toast('Choose "This tab" so the whole meeting is captured',4500);
+      disp=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});
+      vtracks=disp.getVideoTracks();
+    }else{
+      if(!HTMLCanvasElement.prototype.captureStream)return toast('Recording isn’t supported on this device. Please update your browser.');
+      cvr=recCanvas();vtracks=cvr.stream.getVideoTracks();
+    }
     const ac=AC();S.recDest=ac.createMediaStreamDestination();S.recSrc={};
     recAdd('me');Object.keys(S.peers).forEach(recAdd);
-    const out=new MediaStream([...disp.getVideoTracks(),...S.recDest.stream.getAudioTracks()]);
-    const mt=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));
-    const rc=new MediaRecorder(out,mt?{mimeType:mt,videoBitsPerSecond:2500000}:{});
-    S.recChunks=[];rc.ondataavailable=e=>{if(e.data.size)S.recChunks.push(e.data)};
+    const out=new MediaStream([...vtracks,...S.recDest.stream.getAudioTracks()]);
+    const mt=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
+    const ext=mt&&mt.indexOf('mp4')>=0?'mp4':'webm';
+    let rc;try{rc=new MediaRecorder(out,mt?{mimeType:mt,videoBitsPerSecond:desktop?2500000:1800000}:{})}catch(e){rc=new MediaRecorder(out)}
+    S.recChunks=[];rc.ondataavailable=e=>{if(e.data&&e.data.size)S.recChunks.push(e.data)};
+    try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{S._rwl=l}).catch(()=>{})}catch(e){}
     rc.onstop=()=>{
-      disp.getTracks().forEach(t=>t.stop());
-      const b=new Blob(S.recChunks,{type:'video/webm'});const a=document.createElement('a');
-      a.href=URL.createObjectURL(b);a.download='vibeo-meet-'+S.code+'-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.webm';
-      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+      if(disp)disp.getTracks().forEach(t=>t.stop());if(cvr)cvr.stop();
+      try{S._rwl&&S._rwl.release();S._rwl=null}catch(e){}
+      const b=new Blob(S.recChunks,{type:(rc.mimeType||mt||'video/webm').split(';')[0]});const a=document.createElement('a');
+      a.href=URL.createObjectURL(b);a.download='vibeo-meet-'+S.code+'-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.'+ext;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),20000);
       S.recChunks=[];
     };
-    disp.getVideoTracks()[0].onended=stopRecording;
+    if(disp)disp.getVideoTracks()[0].onended=stopRecording;
     rc.start(1000);S.recorder=rc;pushState();renderBar();renderBadges();
     toast(meHost()?'Recording started. Everyone in the meeting has been notified.':'Recording to your device. Everyone in the meeting has been notified.',4500);
-  }catch(e){S.recorder=null;renderBar();toast(e&&e.name==='NotAllowedError'?'Recording cancelled – choose “This tab” and click Share to record.':'Could not start recording on this browser.',4500)}
+  }catch(e){S.recorder=null;renderBar();toast(e&&e.name==='NotAllowedError'?'Recording cancelled – choose “This tab” and click Share to record.':'Could not start recording on this device.',4500)}
 }
 function stopRecording(){
   const r=S.recorder;if(!r)return;S.recorder=null;try{r.stop()}catch(e){}
@@ -2152,7 +2330,7 @@ async function monitor(){
       if(r.type==='outbound-rtp'&&r.kind==='video'&&r.qualityLimitationReason==='cpu')cpu=true;
       if(r.type==='inbound-rtp'&&r.kind==='video'){
         const f=r.framesDecoded||0;
-        if(p.vis&&p.st.cam&&p.st.net!=='audio'){if(f===p._f)p._fz=(p._fz||0)+1;else p._fz=0;const fz=p._fz>=2;if(fz!==!!p.frozen){p.frozen=fz;changed=true}}
+        if(p.vis&&p.st.cam&&p.st.net!=='audio'&&!(WB.open||performance.now()<(S._wbGrace||0))){if(f===p._f)p._fz=(p._fz||0)+1;else p._fz=0;const fz=p._fz>=2;if(fz!==!!p.frozen){p.frozen=fz;changed=true}}
         else{p._fz=0;if(p.frozen){p.frozen=false;changed=true}}
         p._f=f;
       }
@@ -2237,6 +2415,10 @@ panelMotion.addEventListener('transitionend',e=>{
   panelResizeAnimating=false;
   if(S.active&&S.phase==='in')requestAnimationFrame(()=>{if(S.active&&S.phase==='in'){renderStage();if(WB.open)try{wbFit()}catch(e){}}});
 });
+{const bp=$('bgPanel');
+ bp.addEventListener('transitionrun',e=>{if(e.target===bp&&(e.propertyName==='width'||e.propertyName==='transform')){panelResizeAnimating=true;rsLast=0}});
+ bp.addEventListener('transitionend',e=>{if(e.target!==bp||(e.propertyName!=='width'&&e.propertyName!=='transform'))return;panelResizeAnimating=false;
+  if(S.active&&S.phase==='in')requestAnimationFrame(()=>{if(S.active&&S.phase==='in'){renderStage();if(WB.open)try{wbFit()}catch(e){}}})})}
 const ro=new ResizeObserver(()=>{
   if(rsq)return;
   rsq=requestAnimationFrame(()=>{
@@ -2432,6 +2614,10 @@ function renderBar(){
   tip('bLeave','Leave call');tip('bInfo','Meeting details');tip('bPeople','People (P)');tip('bChat','Chat (C)');tip('bHost','Host controls');
   $('sbCam').classList.toggle('lock',camLocked());if(camLocked())tip('bCam','Camera turned off by the host');
   $('bHand').setAttribute('aria-pressed',!!S.hand);$('bShare').setAttribute('aria-pressed',!!(S.screen||WB.open));
+  const lb=(id,t)=>{const x=$(id);if(x.dataset.lbl!==t)x.dataset.lbl=t};
+  lb('bMic',mOn?'Mute':'Unmute');lb('bCam',cOn?'Stop video':'Start video');lb('bShare',S.screen||WB.open?'Presenting':'Present');lb('bPeople','People');lb('bChat','Chat');lb('bMore','More');lb('bLeave','Leave');
+  lb('bEmo','React');lb('bHand',S.hand?'Lower':'Raise');lb('bCC','Captions');lb('bFx','Effects');lb('bRec',S.recorder?'Stop':'Record');lb('bInfo','Info');lb('bHost','Host');
+  if(typeof msRefresh==='function')msRefresh();
 }
 async function devMenu(btn,anchor,kind){
   const pp=$('pop');
@@ -2469,7 +2655,7 @@ function fx(e,name){
   const d=document.createElement('div');d.className='fxi';d.style.left=(Math.random()*40)+'px';
   d.innerHTML=`<span>${esc(e)}</span><small>${esc(name)}</small>`;$('fx').appendChild(d);setTimeout(()=>d.remove(),3900);
 }
-$('bMore').onclick=e=>{
+const _bMorePop=e=>{
   const L=S.layout;
   popMenu(e.currentTarget,[
     {icon:'grid',label:'Auto layout',check:L==='auto',fn:()=>{S.layout='auto';S.page=0;renderSoon()}},
@@ -2481,15 +2667,68 @@ $('bMore').onclick=e=>{
     {icon:'full',label:'Full screen',fn:()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}}
   ],true);
 };
+const MS_EMO=['👍','👏','❤️','😂','😮','🎉','😢','🙏'];
+function msBuild(){
+  let sh=$('msheet');if(!sh){sh=document.createElement('div');sh.id='msheet';sh.innerHTML='<div class="msBack"></div><div class="msBox" role="dialog" aria-label="More options"><div class="msGrip"></div><div class="msEmo"></div><div class="msGrid"></div></div>';$('call').appendChild(sh);
+    sh.querySelector('.msBack').onclick=msClose;
+    sh.querySelector('.msEmo').innerHTML=MS_EMO.map(x=>`<button aria-label="React ${x}">${x}</button>`).join('');
+    sh.querySelector('.msEmo').onclick=e=>{const b=e.target.closest('button');if(!b)return;sendReact(b.textContent)};
+    sh.querySelector('.msGrid').onclick=e=>{const b=e.target.closest('[data-ms]');if(!b||b.classList.contains('dis'))return;const f=MS_ACT[b.dataset.ms];msClose();if(f)setTimeout(f,230)};
+    let y0=null;const bx=sh.querySelector('.msBox');bx.addEventListener('touchstart',e=>{y0=bx.scrollTop<=0?e.touches[0].clientY:null},{passive:true});bx.addEventListener('touchend',e=>{if(y0!=null&&e.changedTouches[0].clientY-y0>70)msClose();y0=null},{passive:true});
+  }
+  return sh;
+}
+const MS_ACT={
+  hand:()=>toggleHand(),cc:()=>ccToggle(),fx:()=>openBg(),
+  rec:()=>{if(S.recorder)return stopRecording();if(!canRecord())return toast('The host hasn’t allowed participants to record');startRecording()},
+  info:()=>openPanel('info'),host:()=>openPanel('host'),settings:()=>openSettings(),
+  layout:()=>{const o=['auto','gal','spot'],n=o[(o.indexOf(S.layout)+1)%3];S.layout=n;if(n==='gal')S.pinned=null;S.page=0;renderSoon();toast({auto:'Layout: Auto',gal:'Layout: Tiled',spot:'Layout: Spotlight'}[n])},
+  full:()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}
+};
+function msRefresh(){
+  const sh=$('msheet');if(!sh||!sh.classList.contains('show'))return;
+  const ok=canRecord(),L=S.layout;
+  const it=[
+    ['hand',handIco(24),S.hand?'Lower hand':'Raise hand',S.hand?'on':''],
+    ['cc',ico('cc',24),CC.on?'Captions on':'Captions',CC.on?'on':''],
+    ['fx',ico('fx',24),'Backgrounds & effects',(BG.mode!=='none'||BG.light)?'on':''],
+    ['rec',ico('rec',24),S.recorder?'Stop recording':'Record',S.recorder?'rec':(ok?'':'dis')],
+    ['layout',ico('grid',24),'Layout: '+(L==='gal'?'Tiled':L==='spot'?'Spotlight':'Auto'),''],
+    ['info',ico('info',24),'Meeting details',''],
+    ...(meHost()?[['host',ico('shield',24),'Host controls','']]:[]),
+    ['settings',ico('gear',24),'Settings & devices',''],
+    ['full',ico('full',24),'Full screen','']
+  ];
+  const g=sh.querySelector('.msGrid'),h=it.map(([k,i,l,c])=>`<button class="msI ${c}" data-ms="${k}"><span class="ic">${i}</span><span>${l}</span></button>`).join('');
+  if(g._h!==h){g._h=h;g.innerHTML=h}
+}
+function msOpen(){const sh=msBuild();clearTimeout(sh._t);sh.classList.remove('closing');sh.classList.add('show');msRefresh()}
+function msClose(){const sh=$('msheet');if(!sh||!sh.classList.contains('show'))return;sh.classList.add('closing');clearTimeout(sh._t);sh._t=setTimeout(()=>sh.classList.remove('show','closing'),270)}
+$('bMore').onclick=e=>{if(matchMedia('(max-width:640px)').matches)msOpen();else _bMorePop(e)};
+window.addEventListener('resize',()=>{if(!matchMedia('(max-width:640px)').matches)msClose()});
 $('bLeave').onclick=e=>{
   if(meHost()&&Object.keys(S.peers).length){
     const others=Object.keys(S.peers).filter(i=>!isHost(i)).length;
     popMenu(e.currentTarget,[
       {icon:'end',label:S.hosts.size>1?'Leave meeting':'Leave meeting',fn:()=>leave()},
-      {icon:'close',label:'End meeting for everyone',danger:true,fn:()=>{bc({t:'end'});setTimeout(()=>leave('You ended the meeting for everyone.'),250)}}
+      {icon:'close',label:'End meeting for everyone',danger:true,fn:endForAll},
+      {icon:'close',label:'Remove everyone else',fn:removeAllGuests}
     ],true);
   }else leave();
 };
+function endForAll(){
+  bc({t:'end'});setTimeout(()=>bc({t:'end'}),200);setTimeout(()=>bc({t:'end'}),500);
+  setTimeout(()=>leave('You ended the meeting for everyone.'),800);
+}
+function removeAllGuests(){
+  const ids=Object.keys(S.peers).filter(i=>!isHost(i));
+  if(!ids.length)return toast('There is nobody else to remove');
+  if(!confirm('Remove everyone except hosts from this meeting? They can ask to rejoin.'))return;
+  ids.forEach(id=>to(id,{t:'kick'}));
+  setTimeout(()=>ids.forEach(id=>to(id,{t:'kick'})),250);
+  setTimeout(()=>ids.forEach(id=>{if(S.peers[id])dropPeer(id,true)}),700);
+  toast('Removed '+ids.length+(ids.length>1?' people':' person'));
+}
 function leave(reason){
   if(!S.active)return;
   S.left=true;clearTimeout(window._reT);try{bc({t:'bye'})}catch(e){}
@@ -2515,9 +2754,13 @@ window.addEventListener('beforeunload',()=>{if(S.active){histSave();try{bc({t:'b
 /* ---------- side panel ---------- */
 function openPanel(name){
   if(S.panel===name){closePanel();return}
+  const bgEl=$('bgPanel'),bgWas=!!bgEl&&!bgEl.classList.contains('hide')&&typeof bgLive==='function'&&bgLive()&&matchMedia('(min-width:761px)').matches;
+  const pn=$('panel');
+  if(bgWas){bgEl.classList.add('noanim');pn.classList.add('noanim');void pn.offsetWidth}
   if(typeof closeBg==='function')closeBg();
-  const wasOpen=!!S.panel;S.panel=name;const pn=$('panel');pn.classList.remove('hide');
-  if(wasOpen){pn.classList.remove('swap');void pn.offsetWidth;pn.classList.add('swap')}else pn.classList.remove('swap');
+  const wasOpen=!!S.panel;S.panel=name;pn.classList.remove('hide');
+  if(wasOpen||bgWas){pn.classList.remove('swap');void pn.offsetWidth;pn.classList.add('swap')}else pn.classList.remove('swap');
+  if(bgWas)requestAnimationFrame(()=>requestAnimationFrame(()=>{pn.classList.remove('noanim');bgEl.classList.remove('noanim')}));
   $('pTitle').textContent={people:'People',chat:'In-call messages',host:'Host controls',info:'Meeting details'}[name];
   if(name==='chat'){S.unread=0;buildChat()}else renderPanel();
   renderBar();renderSoon();
@@ -2537,7 +2780,7 @@ function panelPeople(){
   }
   const all=[{id:'me',email:USER.email,pic:USER.pic,st:myState(),self:true,own:ownMe()},...Object.values(S.peers).map(p=>({id:p.id,email:p.email,pic:p.pic,st:p.st,own:p.own}))];
   all.sort((a,b)=>(b.st.hand?1:0)-(a.st.hand?1:0)||(a.st.hand&&b.st.hand?a.st.hand-b.st.hand:0));
-  h+=`<div class="sh"><b>In the meeting (${all.length})</b>${hv?'<span><button class="lnk" data-act="muteAll">Mute all</button><button class="lnk" data-act="camOffAll">Stop video</button><button class="lnk" data-act="lowerAll">Lower hands</button></span>':''}</div>`;
+  h+=`<div class="sh"><b>In the meeting (${all.length})</b>${hv?'<span><button class="lnk" data-act="muteAll">Mute all</button><button class="lnk" data-act="camOffAll">Stop video</button><button class="lnk" data-act="lowerAll">Lower hands</button><button class="lnk" style="color:var(--bad)" data-act="removeAll">Remove all</button></span>':''}</div>`;
   let hn=0;
   all.forEach(u=>{
     const rid=u.self?myId():u.id;const host=isHost(rid);
@@ -2562,7 +2805,7 @@ function panelHost(){
    sw('cam','Participants can use their camera','Turn off to switch every participant’s video off. They can’t turn it back on. Hosts are not affected.')+
    sw('wbw','Participants can write on the whiteboard','Off by default. Participants can still watch the board.')+
    sw('record','Participants can record','Hosts can always record. Everyone is notified.')+
-   `<div class="act"><button class="btn" data-act="muteAll">${ico('micoff',20)}Mute everyone</button><button class="btn" data-act="camOffAll">${ico('camoff',20)}Turn off everyone’s video</button><button class="btn" data-act="lowerAll">${handIco(20)}Lower all hands</button><button class="btn danger" data-act="endAll">${ico('end',20)}End meeting for everyone</button></div>`;
+   `<div class="act"><button class="btn" data-act="muteAll">${ico('micoff',20)}Mute everyone</button><button class="btn" data-act="camOffAll">${ico('camoff',20)}Turn off everyone’s video</button><button class="btn" data-act="lowerAll">${handIco(20)}Lower all hands</button><button class="btn danger" data-act="removeAll">${ico('close',20)}Remove everyone else</button><button class="btn danger" data-act="endAll">${ico('end',20)}End meeting for everyone</button></div>`;
 }
 function panelInfo(){
   const l=meetLink(S.code);
@@ -2596,7 +2839,8 @@ $('pBody').addEventListener('click',e=>{
     case'admitAll':S.lobbyV.slice().forEach(e=>decide(e.id,true));break;
     case'muteAll':bc({t:'mute',all:true});toast('Muted everyone');break;case'camOffAll':bc({t:'camoff',all:true});toast('Turned off everyone’s video');break;
     case'lowerAll':bc({t:'lower',all:true});if(S.hand){S.hand=0;pushState()}renderSoon();break;
-    case'endAll':if(confirm('End this meeting for everyone?')){bc({t:'end'});setTimeout(()=>leave('You ended the meeting for everyone.'),250)}break;
+    case'endAll':if(confirm('End this meeting for everyone?'))endForAll();break;
+    case'removeAll':removeAllGuests();break;
     case'copyLink':navigator.clipboard&&navigator.clipboard.writeText(meetLink(S.code)).then(()=>toast('Link copied'));break;
     case'copyCode':navigator.clipboard&&navigator.clipboard.writeText(S.code).then(()=>toast('Code copied'));break;
     case'share':navigator.share({title:'Join my Vibeo Meet',text:'Join with code '+S.code,url:meetLink(S.code)}).catch(()=>{});break;
@@ -2714,15 +2958,24 @@ function wbLay(){
     sp.classList.remove('wbOn','wbScr','wbOpen');
   }
 }
+function vidKick(){
+  /* re-attach + replay every video and re-request streams after the whiteboard covers / uncovers the stage */
+  if(!S.active||S.phase!=='in')return;
+  S._wbGrace=performance.now()+5000;
+  Object.values(S.peers).forEach(p=>{p._fz=0;p.frozen=false;p.sentQ=undefined});
+  tileCache.forEach(el=>{const v=el.querySelector('video');if(!v)return;el._chk=0;const src=v.srcObject;if(src&&el.isConnected&&!el.classList.contains('novid')){v.srcObject=null;v.srcObject=src}if(v.paused)v.play().catch(()=>{})});
+  renderSoon();setTimeout(()=>{sendWants();applySenders();paintAll()},120);
+}
+function vidKickSoon(){[80,420,1100,2400].forEach(t=>setTimeout(()=>{try{vidKick()}catch(e){}},t))}
 function wbOpen(remote){
   const was=WB.open;if(!WB.built)wbBuild();WB._can=wbCan();WB.open=true;WB.touched=true;{const w=$('wb'),wasHid=w.classList.contains('hide');w._closing=false;clearTimeout(w._ct);wbLay();w.classList.remove('hide','animOut');if(wasHid){w.classList.remove('animIn');void w.offsetWidth;w.classList.add('animIn');clearTimeout(w._at);w._at=setTimeout(()=>w.classList.remove('animIn'),560)}}wbFit();wbRender();
-  if(!remote&&!was)wbSend({a:'open'});renderBar();renderSoon();setTimeout(wbFit,230);
+  if(!remote&&!was)wbSend({a:'open'});renderBar();renderSoon();setTimeout(wbFit,230);vidKickSoon();
 }
 function wbClose(all){
   WB.open=false;const w=$('wb');if(all)wbSend({a:'close'});
   w._closing=true;wbLay();clearTimeout(w._at);w.classList.remove('animIn');void w.offsetWidth;w.classList.add('animOut');
-  clearTimeout(w._ct);w._ct=setTimeout(()=>{w._closing=false;w.classList.remove('animOut');w.classList.add('hide');wbLay();renderSoon()},340);
-  renderBar();renderSoon();
+  clearTimeout(w._ct);w._ct=setTimeout(()=>{w._closing=false;w.classList.remove('animOut');w.classList.add('hide');wbLay();renderSoon();vidKickSoon()},340);
+  renderBar();renderSoon();vidKickSoon();
 }
 function wbReset(){WB.open=false;WB.touched=false;setTimeout(()=>{try{wbLay()}catch(e){}},0);WB.pages=[{bg:'none',st:[],ob:[]}];WB.pi=0;WB.sel=[];WB.bbox=null;WB.hist=[];WB.redo=[];WB.rng=null;if(WB.built){$('wb').classList.add('hide');$('wbPage').querySelectorAll('.wo').forEach(e=>e.remove())}}
 function wbFit_OLD(){const a=$('wbArea');if(!a)return;const s=Math.max(.15,Math.min((a.clientWidth-16)/1280,1.5))*(WB.z||1);WB.s=s;$('wbBox').style.cssText='width:'+1280*s+'px;height:'+720*s+'px';$('wbPage').style.transform='scale('+s+')';$('wbPage').style.setProperty('--k',String(1/s));const l=$('wbZl');if(l)l.textContent=Math.round((WB.z||1)*100)+'%';wbObjBar()}
