@@ -1012,13 +1012,13 @@ $('siCancel').onclick=()=>{$('signin').classList.add('hide');afterSignIn=null};
 /* host actions: meeting ban, report threshold ban */
 function banHere(id){
   const dv=S.devOf[id],p=S.peers[id];if(!dv||!p)return toast('Could not identify this device.');
-  to(id,{t:'kick',mban:1});S.banned.add(dv);S.hosts.forEach(h=>h!==myId()&&to(h,{t:'ban',email:dv}));
-  toast(p.email+' was banned from this meeting');setTimeout(()=>dropPeer(id),300);
+  sendRepeat(id,{t:'kick',mban:1});S.banned.add(dv);S.hosts.forEach(h=>h!==myId()&&to(h,{t:'ban',email:dv}));
+  toast(p.email+' was banned from this meeting');setTimeout(()=>dropPeer(id,true),1500);
 }
 function banGlobal(id){
   const dv=S.devOf[id],p=S.peers[id];if(!dv||!p)return;
-  to(id,{t:'kick',banned:1});S.banned.add(dv);gblAdd(dv);S.hosts.forEach(h=>h!==myId()&&to(h,{t:'ban',email:dv}));
-  toast(p.email+' was banned from Vibeo Meet after repeated reports');setTimeout(()=>dropPeer(id),300);
+  sendRepeat(id,{t:'kick',banned:1});S.banned.add(dv);gblAdd(dv);S.hosts.forEach(h=>h!==myId()&&to(h,{t:'ban',email:dv}));
+  toast(p.email+' was banned from Vibeo Meet after repeated reports');setTimeout(()=>dropPeer(id,true),1500);
 }
 function onReport(from,id,reason){
   if(!meHost()||from===id||!S.peers[id])return;const dv=S.devOf[id];if(!dv)return;
@@ -1791,16 +1791,16 @@ $('devClose').onclick=()=>{micTestStop();camTestStop();$('devModal').classList.a
 /* =====================================================================
    MEETING ENGINE
    ===================================================================== */
-const MAXGEN=16;
+const MAXGEN=16;let SEEK_ROUNDS=2; /* how many extra full scans a returning host does before starting a brand-new (empty) meeting */
 const S={active:false,phase:'',peers:{},hosts:new Set(),settings:{},lobby:{},lobbyV:[],timers:[]};
 const opus=sdp=>sdp.replace(/(a=fmtp:\d+ [^\r\n]*minptime=10[^\r\n]*)/g,l=>/usedtx/.test(l)?l:l+';usedtx=1;useinbandfec=1;stereo=0;sprop-stereo=0;maxaveragebitrate=40000');
 function resetS(){
   Object.assign(S,{active:true,opened:false,owner:'',hid:'',phase:'seek',peer:null,deskPeer:null,code:'',creator:false,gen:1,seekGen:1,deskId:null,peers:{},early:{},earlyCalls:{},
     hosts:new Set(),order:[],lobby:{},lobbyV:[],devOf:{},reps:{},banned:new Set(),
-    settings:{ask:true,share:true,chat:true,react:true,unmute:true,record:false,locked:false,cam:true,wbs:false,wbw:false},
+    settings:{ask:true,share:true,chat:true,react:true,unmute:true,record:false,locked:false,cam:true,wbs:false,wbw:false,endOnHost:false},
     stream:null,screen:null,screenCalls:{},micOn:true,camOn:true,hasMic:false,hasCam:false,hand:0,tier:0,bad:0,good:0,
     startedAt:0,layout:'auto',pinned:null,spot:null,page:0,chat:[],unread:0,panel:null,recorder:null,rec:{},activeSpk:null,activeSince:0,
-    lastSpoke:{},knock:null,stopMe:null,timers:[],dummyA:false,dummyV:false,left:false,closing:false,recChunks:[],recCtx:null,recDest:null,recSrc:{}});
+    lastSpoke:{},rounds:0,hg:0,probeN:0,probeAt:0,removed:new Set(),knock:null,stopMe:null,timers:[],dummyA:false,dummyV:false,left:false,closing:false,recChunks:[],recCtx:null,recDest:null,recSrc:{}});
 }
 const myId=()=>S.peer&&S.peer.id;
 function avSync(c){try{c.peerConnection.getReceivers().forEach(r=>{if('jitterBufferTarget' in r)r.jitterBufferTarget=120;else if('playoutDelayHint' in r)r.playoutDelayHint=.12})}catch(e){}}
@@ -1810,10 +1810,10 @@ const tierEff=()=>PREF.q==='audio'?3:Math.max(S.tier,PREF.q==='low'?1:0);
 function peerOpts(id){return[id,{...CFG.SIGNALING,config:{iceServers:[...CFG.ICE,...CFG.TURN]}}]}
 function setWait(t,s){show('waiting');$('wTitle').textContent=t;$('wSub').textContent=s||''}
 function fatal(msg){
-  if(!S.active)return;teardown();
+  if(!S.active)return;sessClear();teardown();
   $('eTitle').textContent='Can’t join this meeting';$('eSub').textContent=msg;S.lastCode=S.code;show('ended');
 }
-$('wCancel').onclick=()=>{clearTimeout(window._reT);teardown();stopMedia();show('landing')};
+$('wCancel').onclick=()=>{clearTimeout(window._reT);sessClear();teardown();stopMedia();show('landing')};
 $('eHome').onclick=()=>{stopMedia();show('landing')};
 $('eRejoin').onclick=()=>{const c=S.code||S.lastCode;if(c)needUser(()=>openPrejoin(c,mine(c)));else show('landing')};
 
@@ -1823,7 +1823,7 @@ function ensureTracks(){
   S.stream.getAudioTracks().forEach(t=>t.enabled=S.micOn);S.stream.getVideoTracks().forEach(t=>t.enabled=S.camOn);
 }
 function enterMeeting(code,creator){
-  resetS();S.code=code;S.creator=creator;S.lastCode=code;try{history.replaceState(null,'',meetLink(code))}catch(e){}
+  resetS();S.code=code;S.creator=creator;S.lastCode=code;try{history.replaceState(null,'',meetLink(code))}catch(e){}sessSave();
   if(M.stopMeter){M.stopMeter();M.stopMeter=null}
   S.stream=M.stream||new MediaStream();M.stream=null;
   S.hasMic=M.hasMic;S.hasCam=M.hasCam;S.micOn=M.hasMic&&M.micOn;S.camOn=M.hasCam&&M.camOn;
@@ -1844,7 +1844,11 @@ function enterMeeting(code,creator){
 function onPeerError(e){
   if(!S.active)return;
   if(e.type==='peer-unavailable'){
-    if(S.phase==='seek'){if(S.seekGen<MAXGEN)seek(S.seekGen+1);else if(ownGet(S.code)===devId()){const c=S.code,st=keepMedia();teardown(false);M.stream=st;enterMeeting(c,true)}else{setWait('Waiting for the host to start…','Keep this page open. You’ll be taken in automatically once the host starts the meeting.');clearTimeout(window._reT);window._reT=setTimeout(()=>{if(S.active&&S.phase==='seek')seek(1)},4000)}}
+    if(S.phase==='in'){const mm=/peer\s+(\S+)/.exec(String(e.message||'')),q=mm&&S.peers[mm[1]];if(q&&q.badSince)q.unav=(q.unav||0)+1;return}
+    if(S.phase==='seek'){if(S.seekGen<MAXGEN)seek(S.seekGen+1);else if(ownGet(S.code)===devId()){
+      if(S.rounds<SEEK_ROUNDS){S.rounds++;setWait('Looking for your meeting…','Checking whether anyone is still in it.');clearTimeout(window._reT);window._reT=setTimeout(()=>{if(S.active&&S.phase==='seek')seek(1)},1200)}
+      else{const c=S.code,st=keepMedia();teardown(false);M.stream=st;enterMeeting(c,true)}
+    }else{setWait('Waiting for the host to start…','Keep this page open. You’ll be taken in automatically once the host starts the meeting.');clearTimeout(window._reT);window._reT=setTimeout(()=>{if(S.active&&S.phase==='seek')seek(1)},4000)}}
     return;
   }
   if(S.phase!=='in'&&/^(network|server-error|socket-error|socket-closed)$/.test(e.type))return waitNet();
@@ -1873,6 +1877,8 @@ function seek(g){
   c.on('open',async()=>{S.phase='knock';c.send({t:'knock',name:USER.email,dev:devId(),gban:getBan()})});
   c.on('data',onKnockMsg);
   c.on('close',()=>{if(S.active&&S.phase==='waiting')fatal('The host left before letting you in.')});
+  setTimeout(()=>{if(S.active&&S.knock===c&&S.phase==='seek'&&!c.open){try{c.close()}catch(e){}onPeerError({type:'peer-unavailable'})}},6000);
+  setTimeout(()=>{if(S.active&&S.knock===c&&S.phase==='knock'){try{c.close()}catch(e){}S.phase='seek';onPeerError({type:'peer-unavailable'})}},12000);
 }
 function onKnockMsg(m){
   if(m.t==='wait'){S.phase='waiting';setWait('Asking to join…','You’ll join as soon as someone in the meeting lets you in.')}
@@ -1892,6 +1898,10 @@ async function handleKnock(conn,m){
   const dev=String(m.dev||'').slice(0,64),email=String(m.name||'').trim().slice(0,30);const ne=await nameCheck(email);if(ne)return conn.send({t:'denied',reason:'That name isn’t allowed ('+ne+').'});if((m.gban&&m.gban.g)||gblList().includes(dev))return conn.send({t:'denied',banned:1,reason:'This device is banned from Vibeo Meet.'});
   if(S.banned.has(dev))return conn.send({t:'denied',mban:1,reason:'The host has banned you from this meeting.'});
   if(S.owner&&dev&&dev===S.owner){Object.keys(S.devOf).forEach(k=>S.devOf[k]===dev&&S.peers[k]&&dropPeer(k,true));S.hosts.add(id);return admit({id,email,pic:'',dev,conn})}
+  if(dev&&!S.removed.has(dev)&&Object.keys(S.devOf).some(k=>S.devOf[k]===dev)){
+    Object.keys(S.devOf).forEach(k=>{const q=S.peers[k];if(S.devOf[k]===dev&&q&&(!q.conn||!q.conn.open||q.badSince))dropPeer(k,true)});
+    return admit({id,email,pic:'',dev,conn});
+  }
   if(S.settings.locked)return conn.send({t:'denied',reason:'This meeting is locked by the host.'});
   const e={id,email,pic:'',dev:dev,conn};
   conn.on('close',()=>{if(S.lobby[id]){delete S.lobby[id];pushLobby()}});
@@ -1908,7 +1918,7 @@ function deskDecide(id,yes){
   const e=S.lobby[id];if(!e)return;delete S.lobby[id];
   if(yes)admit(e);else{try{e.conn.send({t:'denied',reason:'A host denied your request to join.'})}catch(x){}setTimeout(()=>{try{e.conn.close()}catch(x){}},800);pushLobby()}
 }
-function admit(e){const isOwn=!!S.owner&&e.dev===S.owner;S.devOf[e.id]=e.dev;S.hosts.forEach(h=>h!==myId()&&to(h,{t:'dev',id:e.id,dev:e.dev}));
+function admit(e){S.removed.delete(e.dev);const isOwn=!!S.owner&&e.dev===S.owner;S.devOf[e.id]=e.dev;S.hosts.forEach(h=>h!==myId()&&to(h,{t:'dev',id:e.id,dev:e.dev}));
   S.order.push(e.id);
   const roster=[{id:myId(),email:USER.email,pic:USER.pic||'',st:myState(),own:ownMe()},...Object.values(S.peers).map(p=>({id:p.id,email:p.email,pic:p.pic,st:p.st,own:!!p.own}))];
   bc({t:'joined',p:{id:e.id,email:e.email,pic:e.pic,own:isOwn}});
@@ -1945,17 +1955,17 @@ function onIncomingConn(conn,viaDesk){
   });
 }
 function adopt(id,conn){
-  const p=S.peers[id];if(!p)return;conn._m=true;p.conn=conn;delete S.early[id];
-  conn.on('close',()=>{if(p.conn===conn)dropPeer(id)});
+  const p=S.peers[id];if(!p)return;conn._m=true;p.conn=conn;delete S.early[id];p.seen=Date.now();
+  conn.on('close',()=>linkLost(id,conn));
   if(conn.open)sendHi(conn);else conn.on('open',()=>sendHi(conn));
 }
-function sendHi(conn){try{conn.send({t:'hi',st:myState()});if(WB.open)conn.send({t:'wb',a:'full',pages:WB.pages,own:WB.owner})}catch(e){}}
+function sendHi(conn){const _q=S.peers[conn.peer];if(_q){_q.up=1;_q.seen=Date.now()}try{conn.send({t:'hi',st:myState()});if(WB.open)conn.send({t:'wb',a:'full',pages:WB.pages,own:WB.owner})}catch(e){}}
 function connectTo(id){
   const p=S.peers[id];if(!p)return;
   const conn=S.peer.connect(id,{reliable:true});conn._m=true;p.conn=conn;
   conn.on('open',()=>sendHi(conn));
   conn.on('data',m=>onMsg(id,m));
-  conn.on('close',()=>{if(p.conn===conn)dropPeer(id)});
+  conn.on('close',()=>linkLost(id,conn));
   attachCall(id,S.peer.call(id,S.stream,{metadata:{kind:'cam'},sdpTransform:opus}),'cam');
   setTimeout(()=>{if(S.peers[id]&&S.peers[id].conn===conn&&!conn.open)dropPeer(id,true)},12000);
 }
@@ -1982,7 +1992,7 @@ function attachCall(id,call,kind){
     call.on('close',()=>{if(p.scrCall===call){p.screen=null;p.scrCall=null;renderSoon()}});
     return;
   }
-  p.call=call;
+  p.call=call;p.callAt=Date.now();
   call.on('stream',st=>{
     avSync(call);if(p.stream===st)return;p.stream=st;p.audio.srcObject=st;sink(p.audio);p.audio.play().catch(()=>{});
     if(p.stopW)p.stopW();p.stopW=watch(st,lv=>onLevel(id,lv));
@@ -2003,7 +2013,11 @@ function dropPeer(id,silent){
   const tc=tileCache.get(id);if(tc){tc.remove();tileCache.delete(id)}const ts=tileCache.get('scr:'+id);if(ts){ts.remove();tileCache.delete('scr:'+id)}
   if(!silent&&S.phase==='in')toast(p.email+' left');
   if(S.phase==='in'){
-    if(id===S.deskId)succeed();else if(wasH&&!S.hosts.size)toast('The host left. Nobody else becomes host unless the host rejoins or assigns one.',5000);
+    if(id===S.deskId)succeed();
+    if(wasH&&!S.hosts.size){
+      if(S.settings.endOnHost)hostGone();
+      else toast('The host left. Nobody else becomes host unless the host rejoins or assigns one.',5000);
+    }
   }
   renderSoon();
 }
@@ -2020,6 +2034,126 @@ function succeed(){
   }
 }
 
+
+/* ---------- link healing: keeps everyone genuinely connected ---------- */
+const SESS='vibeo-session';
+function sessGet(){try{const v=JSON.parse(sessionStorage.getItem(SESS)||'null');return v&&Date.now()-v.ts<6e5?v:null}catch(e){return null}}
+function sessClear(){try{sessionStorage.removeItem(SESS)}catch(e){}}
+function sessSave(){
+  if(!S.active||!S.code||S.left)return;
+  const old=sessGet(),n=S.phase==='in'?Object.keys(S.peers).length:(old&&old.code===S.code?old.n:0);
+  try{sessionStorage.setItem(SESS,JSON.stringify({code:S.code,ts:Date.now(),n,mic:!!S.micOn,cam:!!S.camOn}))}catch(e){}
+}
+function linkLost(id,conn){
+  const p=S.peers[id];if(!p||p.conn!==conn||!S.active||S.closing)return;
+  if(!p.up)return dropPeer(id,true);
+  p.badSince=p.badSince||Date.now();
+}
+function healLink(id){
+  const p=S.peers[id];
+  if(!p||!S.active||S.closing||S.phase!=='in'||!S.peer||S.peer.disconnected||S.peer.destroyed)return;
+  p.healAt=Date.now();
+  const old=p.conn;let conn;
+  try{conn=S.peer.connect(id,{reliable:true})}catch(e){return}
+  conn._m=true;p.conn=conn;
+  conn.on('open',()=>{
+    p.seen=Date.now();sendHi(conn);healCall(id,true);
+    if(S.screen){try{S.screenCalls[id]&&S.screenCalls[id].close()}catch(e){}delete S.screenCalls[id];shareTo(id)}
+  });
+  conn.on('data',m=>onMsg(id,m));
+  conn.on('close',()=>linkLost(id,conn));
+  if(old&&old!==conn)try{old.close()}catch(e){}
+}
+function healCall(id,force){
+  const p=S.peers[id];
+  if(!p||!S.active||S.closing||S.phase!=='in'||!S.peer||S.peer.disconnected)return;
+  if(!force&&Date.now()-(p.callAt||0)<8000)return;
+  const old=p.call;
+  try{attachCall(id,S.peer.call(id,S.stream,{metadata:{kind:'cam'},sdpTransform:opus}),'cam')}catch(e){return}
+  if(old)setTimeout(()=>{if(p.call!==old)try{old.close()}catch(e){}},2500);
+}
+function checkMedia(p,now){
+  const pc=p.call&&p.call.peerConnection,st=pc?pc.iceConnectionState:'none';
+  let bad=false;
+  if(!p.call||!pc||st==='failed'||st==='closed')bad=now-p.joinedAt>7000;
+  else if(st==='disconnected'){p.disc=p.disc||now;bad=now-p.disc>6000}
+  else p.disc=0;
+  if(!bad&&!p.stream&&now-(p.callAt||p.joinedAt)>15000)bad=true;
+  if(bad)healCall(p.id);
+}
+function linkWatch(){
+  if(!S.active||S.phase!=='in'||S.closing)return;
+  const now=Date.now(),ids=Object.keys(S.peers);
+  if(S.hg&&S.hosts.size){clearTimeout(S.hg);S.hg=0;toast('A host is back. The meeting continues.',3500)}
+  ids.forEach(i=>{const a=S.peers[i].audio;if(a&&a.srcObject&&a.paused)a.play().catch(()=>{})});
+  if(!navigator.onLine){ids.forEach(i=>{if(S.peers[i].badSince)S.peers[i].badSince=now});return}
+  const sigOk=!!S.peer&&!S.peer.disconnected&&!S.peer.destroyed;
+  if(S.peer&&S.peer.disconnected&&!S.peer.destroyed){try{S.peer.reconnect()}catch(e){}}
+  const gone=[],unreach=[];
+  ids.forEach(id=>{
+    const p=S.peers[id];if(!p)return;
+    const open=!!(p.conn&&p.conn.open);
+    if(open&&now-(p.seen||p.joinedAt)<30000){p.badSince=0;p.unav=0;checkMedia(p,now);return}
+    if(!p.up)return;
+    if(document.hidden&&open)return;
+    if(!p.badSince)p.badSince=now;
+    const lim=(isHost(id)&&S.settings.endOnHost)?15000:45000;
+    if(p.unav>=3)gone.push(id);
+    else if(now-p.badSince>lim)unreach.push(id);
+    else if(sigOk&&!(myId()>id&&now-p.badSince<3000)&&now-(p.healAt||0)>3500)healLink(id);
+  });
+  gone.forEach(id=>dropPeer(id));
+  if(unreach.length){
+    /* everybody I knew is unreachable but the signalling server is fine: they probably dropped ME – rejoin from scratch */
+    if(unreach.length===Object.keys(S.peers).length&&S.deskId!==myId()&&sigOk&&now-(window._lastRec||0)>60000){window._lastRec=now;return recover()}
+    unreach.forEach(id=>dropPeer(id));
+  }
+  /* a host who came back alone while the others sit in a successor meeting: go and find them */
+  if(S.creator&&S.gen===1&&meHost()&&!Object.keys(S.peers).length&&!S.probing&&S.probeN<4&&now-S.probeAt>20000){S.probeAt=now;S.probeN++;mergeProbe()}
+}
+function mergeProbe(){
+  S.probing=true;let g=2;
+  const stop=()=>{S.probing=false};
+  const next=()=>{
+    if(!S.active||S.phase!=='in'||Object.keys(S.peers).length||g>8)return stop();
+    const id='vibeo-'+S.code+'-'+(g++);let c,ok=false;
+    try{c=S.peer.connect(id,{reliable:true})}catch(e){return next()}
+    const t=setTimeout(()=>{if(!ok){try{c.close()}catch(e){}next()}},1200);
+    c.on('open',()=>{ok=true;clearTimeout(t);stop();try{c.close()}catch(e){}mergeInto()});
+  };
+  next();
+}
+function mergeInto(){
+  if(!S.active)return;
+  const c=S.code,st=keepMedia();teardown(false);M.stream=st;
+  setWait('Found your meeting…','Joining the people who are still in it.');
+  clearTimeout(window._reT);window._reT=setTimeout(()=>enterMeeting(c,false),1300);
+}
+function askConfirm(msg,yes,label){ /* in-page dialog: the browser's confirm() is silently blocked in many embedded/preview pages, which made remove/end do nothing */
+  const m=document.createElement('div');m.className='modal';m.style.zIndex=97;
+  m.innerHTML='<div class="card"><p style="margin:4px 0 18px;font-size:16px"></p><div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn" data-n>Cancel</button><button class="btn pri" data-y></button></div></div>';
+  m.querySelector('p').textContent=msg;const y=m.querySelector('[data-y]');y.textContent=label||'Confirm';
+  const close=()=>m.remove();
+  m.querySelector('[data-n]').onclick=close;y.onclick=()=>{close();yes()};
+  m.addEventListener('mousedown',e=>{if(e.target===m)close()});
+  document.body.appendChild(m);y.focus();
+}
+function sendRepeat(id,m){[0,250,600,1000].forEach(d=>setTimeout(()=>to(id,m),d))}
+function kickPeer(id){const p=S.peers[id];if(!p)return;markRemoved(id);sendRepeat(id,{t:'kick'});setTimeout(()=>dropPeer(id,true),1500);toast('Removed '+p.email)}
+function markRemoved(id){const d=S.devOf[id];if(!d)return;S.removed.add(d);if(S.deskId&&S.deskId!==myId())to(S.deskId,{t:'rem',dev:d})}
+function hostGone(){
+  if(S.hg||meHost())return;
+  toast('The host disconnected. The meeting will end in 20 seconds unless they come back.',7000);
+  const tok=S.hg=setTimeout(()=>{if(S.hg!==tok)return;S.hg=0;if(S.active&&S.phase==='in'&&!S.hosts.size)leave('The host left, so the meeting was ended for everyone.')},20000);
+}
+function leaveSmart(){
+  if(meHost()&&S.settings.endOnHost&&S.hosts.size<=1&&Object.keys(S.peers).length)return endForAll();
+  leave();
+}
+window.addEventListener('online',()=>{if(S.active&&S.peer&&S.peer.disconnected&&!S.peer.destroyed){try{S.peer.reconnect()}catch(e){}}setTimeout(linkWatch,600)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(linkWatch,300)});
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>{try{AC()}catch(e){}if(S.active)Object.values(S.peers).forEach(p=>{if(p.audio&&p.audio.srcObject&&p.audio.paused)p.audio.play().catch(()=>{})})},{passive:true}));
+
 /* ---------- messaging ---------- */
 function to(id,m){const p=S.peers[id];if(p&&p.conn&&p.conn.open)try{p.conn.send(m)}catch(e){}}
 function bc(m){Object.values(S.peers).forEach(p=>{if(p.conn&&p.conn.open)try{p.conn.send(m)}catch(e){}})}
@@ -2034,7 +2168,7 @@ function onMsg(from,m){
   if(!m||!S.active)return;
   /* end / remove must work even if the sender's peer record is momentarily missing or the host list is stale (e.g. host rejoined) */
   if(m.t==='end'||m.t==='kick'){const sp=S.peers[from];if(S.hosts.has(from)||(sp&&sp.own)||from===S.deskId&&S.hosts.size===0){hostObey(m);return}}
-  const p=S.peers[from];if(!p)return;
+  const p=S.peers[from];if(!p)return;p.seen=Date.now();
   const H=isHost(from);
   switch(m.t){
     case'hi':case'st':{
@@ -2046,7 +2180,7 @@ function onMsg(from,m){
       renderSoon();break}
     case'joined':
       if(from!==S.deskId)break;
-      if(!S.peers[m.p.id]&&m.p.id!==myId()){addPeer(m.p);toast(m.p.own?'Host '+m.p.email+' has joined the meeting':m.p.email+' joined',m.p.own?5500:3200);chime();}
+      if(!S.peers[m.p.id]&&m.p.id!==myId()){addPeer(m.p);if(m.p.own)S.hosts.add(m.p.id);renderSoon();toast(m.p.own?'Host '+m.p.email+' has joined the meeting':m.p.email+' joined',m.p.own?5500:3200);chime();}
       break;
     case'chat':
       if(!S.settings.chat&&!H)break;
@@ -2070,6 +2204,8 @@ function onMsg(from,m){
     case'want':p.q=m.q;applySenders();break;
     case'report':onReport(from,m.id,m.reason);break;
     case'dev':if(H&&from===S.deskId)S.devOf[m.id]=m.dev;break;
+    case'rem':if(H&&typeof m.dev==='string')S.removed.add(m.dev.slice(0,64));break;
+    case'ping':break;
     case'devmap':if(H){Object.assign(S.devOf,m.m);(m.b||[]).forEach(x=>S.banned.add(x))}break;
         case'wb':onWb(from,m);break;case'cc':ccIn(from,m);break;case'bye':dropPeer(from);break;
   }
@@ -2408,6 +2544,7 @@ function startCall(){
   S.timers.push(setInterval(monitor,2000));
   S.timers.push(setInterval(tickSpeaker,500));S.timers.push(setInterval(ccSync,1500));S.timers.push(setInterval(()=>histSave(),20000));histSave();
   S.timers.push(setInterval(()=>{if(S.active)applySenders()},8000));
+  S.timers.push(setInterval(()=>bc({t:'ping'}),5000));S.timers.push(setInterval(linkWatch,2500));S.timers.push(setInterval(sessSave,3000));
   if(camLocked()&&S.camOn)toast('The host has turned off cameras for participants',4500);
   renderBar();
   if(S.creator){openPanel('info');toast('Your meeting is ready. Share the code to invite people.',5000)}
@@ -2571,7 +2708,7 @@ function hostActions(id){
   if(p.st.cam)a.push({icon:'camoff',label:'Turn off camera',fn:()=>to(id,{t:'camoff'})});
   if(p.st.hand)a.push({icon:'check',label:'Lower hand',fn:()=>to(id,{t:'lower',id})});
   a.push(isHost(id)?{icon:'shield',label:'Remove as host',fn:()=>{S.hosts.delete(id);bc({t:'hosts',list:[...S.hosts]});renderSoon()}}:{icon:'shield',label:'Make a host',fn:()=>{S.hosts.add(id);to(id,{t:'devmap',m:S.devOf,b:[...S.banned]});bc({t:'hosts',list:[...S.hosts]});if(S.deskId===myId())pushLobby();renderSoon()}});
-  a.push('-',{icon:'close',label:'Remove from meeting',fn:()=>{if(confirm('Remove '+p.email+'? They can ask to rejoin.')){to(id,{t:'kick'});setTimeout(()=>dropPeer(id),300)}}},{icon:'close',label:'Ban from this meeting',danger:true,fn:()=>{if(confirm('Ban '+p.email+'’s device from this meeting? They can still join other meetings.'))banHere(id)}});
+  a.push('-',{icon:'close',label:'Remove from meeting',fn:()=>askConfirm('Remove '+p.email+'? They can ask to rejoin.',()=>kickPeer(id),'Remove')},{icon:'close',label:'Ban from this meeting',danger:true,fn:()=>askConfirm('Ban '+p.email+'’s device from this meeting? They can still join other meetings.',()=>banHere(id),'Ban')});
   return a;
 }
 
@@ -2720,28 +2857,29 @@ $('bLeave').onclick=e=>{
   if(meHost()&&Object.keys(S.peers).length){
     const others=Object.keys(S.peers).filter(i=>!isHost(i)).length;
     popMenu(e.currentTarget,[
-      {icon:'end',label:S.hosts.size>1?'Leave meeting':'Leave meeting',fn:()=>leave()},
+      {icon:'end',label:(S.settings.endOnHost&&S.hosts.size<=1)?'Leave (ends meeting for all)':'Leave meeting',fn:leaveSmart},
       {icon:'close',label:'End meeting for everyone',danger:true,fn:endForAll},
       {icon:'close',label:'Remove everyone else',fn:removeAllGuests}
     ],true);
   }else leave();
 };
 function endForAll(){
-  bc({t:'end'});setTimeout(()=>bc({t:'end'}),200);setTimeout(()=>bc({t:'end'}),500);
-  setTimeout(()=>leave('You ended the meeting for everyone.'),800);
+  [0,200,500,1000,1700].forEach(d=>setTimeout(()=>{if(S.active)bc({t:'end'})},d));
+  Object.values(S.lobby).forEach(e=>{try{e.conn.send({t:'denied',reason:'The host ended the meeting.'})}catch(x){}});
+  setTimeout(()=>leave('You ended the meeting for everyone.'),2300);
 }
 function removeAllGuests(){
-  const ids=Object.keys(S.peers).filter(i=>!isHost(i));
-  if(!ids.length)return toast('There is nobody else to remove');
-  if(!confirm('Remove everyone except hosts from this meeting? They can ask to rejoin.'))return;
-  ids.forEach(id=>to(id,{t:'kick'}));
-  setTimeout(()=>ids.forEach(id=>to(id,{t:'kick'})),250);
-  setTimeout(()=>ids.forEach(id=>{if(S.peers[id])dropPeer(id,true)}),700);
-  toast('Removed '+ids.length+(ids.length>1?' people':' person'));
+  if(!Object.keys(S.peers).some(i=>!isHost(i))&&!Object.keys(S.lobby).length)return toast('There is nobody else to remove');
+  askConfirm('Remove everyone except hosts from this meeting? They can ask to rejoin.',()=>{
+    const ids=Object.keys(S.peers).filter(i=>!isHost(i));
+    ids.forEach(kickPeer);
+    Object.values(S.lobby).forEach(e=>{try{e.conn.send({t:'denied',reason:'A host removed everyone from the meeting.'})}catch(x){}});
+    toast('Removed '+ids.length+(ids.length===1?' person':' people'));
+  },'Remove everyone');
 }
 function leave(reason){
   if(!S.active)return;
-  S.left=true;clearTimeout(window._reT);try{bc({t:'bye'})}catch(e){}
+  S.left=true;sessClear();clearTimeout(window._reT);try{bc({t:'bye'})}catch(e){}
   const code=S.code;
   teardown();
   stopMedia();S.lastCode=code;
@@ -2749,7 +2887,7 @@ function leave(reason){
 }
 function teardown(stopTracks){
   if(S.startedAt&&S.active)histSave();wbReset();ccReset();S.closing=true;
-  S.timers.forEach(clearInterval);S.timers=[];
+  S.timers.forEach(clearInterval);S.timers=[];clearTimeout(S.hg);S.hg=0;
   if(S.recorder){try{S.recorder.stop()}catch(e){}S.recorder=null}
   if(S.screen){S.screen.getTracks().forEach(t=>{t.onended=null;t.stop()});S.screen=null}
   Object.values(S.peers).forEach(p=>{try{p.call&&p.call.close()}catch(e){}try{p.scrCall&&p.scrCall.close()}catch(e){}try{p.conn&&p.conn.close()}catch(e){}if(p.stopW)p.stopW();p.audio.srcObject=null;p.audio.remove()});
@@ -2759,7 +2897,8 @@ function teardown(stopTracks){
   tileCache.forEach(el=>el.remove());tileCache.clear();$('gal').innerHTML='';$('main').innerHTML='';$('strip').innerHTML='';$('hiddenAudio').innerHTML='';
   S.peers={};S.active=false;S.phase='';S.panel=null;$('panel').classList.add('hide');$('topnote').innerHTML='';$('fx').innerHTML='';
 }
-window.addEventListener('beforeunload',()=>{if(S.active){histSave();try{bc({t:'bye'})}catch(e){}}});
+window.addEventListener('beforeunload',e=>{if(S.active&&S.phase==='in'&&!S.left){histSave();sessSave();e.preventDefault();e.returnValue=''}});
+window.addEventListener('pagehide',ev=>{if(S.active&&!ev.persisted){try{histSave();sessSave()}catch(x){}try{bc({t:'bye'})}catch(x){}}});
 
 /* ---------- side panel ---------- */
 function openPanel(name){
@@ -2808,6 +2947,7 @@ function panelHost(){
   $('pBody').innerHTML=`<p class="mut" style="margin:4px 0 8px">These controls apply to everyone in the meeting. Co-hosts can change them too.</p>`+
    sw('ask','Ask to join','Hosts approve each person before they enter')+
    sw('locked','Lock meeting','No one new can join, even with the code')+
+   sw('endOnHost','Remove everyone when the host leaves','Off by default. When on, if the host leaves or loses connection (and no co-host is left), everyone else is removed and the meeting ends. If the host comes back within about 30 seconds after a dropped connection, the meeting carries on.')+
    sw('share','Participants can share screen','Turn off so only hosts can present')+
    sw('chat','Participants can send chat','')+
    sw('react','Participants can send reactions','')+
@@ -2851,7 +2991,7 @@ $('pBody').addEventListener('click',e=>{
     case'denyAll':S.lobbyV.slice().forEach(e=>decide(e.id,false));break;
     case'muteAll':bc({t:'mute',all:true});toast('Muted everyone');break;case'camOffAll':bc({t:'camoff',all:true});toast('Turned off everyone’s video');break;
     case'lowerAll':bc({t:'lower',all:true});if(S.hand){S.hand=0;pushState()}renderSoon();break;
-    case'endAll':if(confirm('End this meeting for everyone?'))endForAll();break;
+    case'endAll':askConfirm('End this meeting for everyone?',endForAll,'End for everyone');break;
     case'removeAll':removeAllGuests();break;
     case'copyLink':navigator.clipboard&&navigator.clipboard.writeText(meetLink(S.code)).then(()=>toast('Link copied'));break;
     case'copyCode':navigator.clipboard&&navigator.clipboard.writeText(S.code).then(()=>toast('Code copied'));break;
@@ -3281,7 +3421,7 @@ function wbGo(d){const n=WB.pi+d;if(n<0||n>=WB.pages.length)return;WB.pi=n;WB.se
 function wbNewPage(){if(WB.pages.length>=60)return toast('Page limit reached');const cp=wbPg(),bg=cp.bg,th=cp.th||2,sp=cp.sp||32;WB.pages.push({bg,th,sp,w:cp.w||1280,h:cp.h||720,sz:cp.sz||'169',st:[],ob:[]});WB.pi=WB.pages.length-1;WB.so=null;WB.touched=true;wbSend({a:'pg',bg,th,sp,w:cp.w||1280,h:cp.h||720,sz:cp.sz||'169'});wbRender()}
 function wbSetBg(b,th,sp,lc){if(!WBG[b])return;const all=$('wbAll').checked,c=wbPg();th=th==null?(c.th||2):num(th,1,12,2);sp=sp==null?(c.sp||32):num(sp,12,120,32);lc=/^#[0-9a-f]{6}$/i.test(lc||'')?lc:(c.lc||'#bcc5e6');(all?WB.pages:[c]).forEach(p=>{p.bg=b;p.th=th;p.sp=sp;p.lc=lc});wbSend({a:'bg',pg:WB.pi,bg:b,all,th,sp,lc});wbBgPaint()}
 function wbBgLines(x){const b=wbPg().bg;wbSetBg(b==='none'?'ruled':b,+$('wbBth'+x).value,+$('wbBsp'+x).value)}
-function wbClear(){if(!confirm('Clear this page for everyone?'))return;wbSnap();const p=wbPg();p.st=[];p.ob=[];WB.sel=[];WB.bbox=null;wbSend({a:'clr',pg:WB.pi});wbRender()}
+function wbClear(){askConfirm('Clear this page for everyone?',()=>{wbSnap();const p=wbPg();p.st=[];p.ob=[];WB.sel=[];WB.bbox=null;wbSend({a:'clr',pg:WB.pi});wbRender()},'Clear')}
 function wbDelSel(){const pg=wbPg();let ids=WB.sel.slice();if(!ids.length&&WB.so)ids=[WB.so];if(!ids.length){const e=wbObjEl();if(e)ids=[e.dataset.id]}if(!ids.length)return toast('Use Select and draw a loop around something, or click inside a box, then Delete');
   wbSnap();WB.rng=null;wbRemove(ids)}
 /* undo moved to snapshot version below */
@@ -3708,6 +3848,23 @@ function setBgColor(v,live){
   }else buildBg();
   applyBg().catch(()=>{});if(S.active)renderBar();
 }
+
+/* ---------- resume after a refresh / accidental reload ---------- */
+(async function resumeAfterRefresh(){
+  const sv=sessGet();if(!sv||!USER)return;
+  const hc=location.hash.length>2?parseCode(location.hash):'';
+  if(!hc||hc!==sv.code)return;
+  const b=getBan();if(b&&b.g)return;
+  try{
+    PJ={code:sv.code,host:false};
+    M.micOn=sv.mic!==false;M.camOn=sv.cam!==false;
+    setWait('Rejoining your meeting…','The page was reloaded. Picking up where you left off.');
+    await startMedia();
+    enterMeeting(sv.code,false);
+    if(!(sv.n>0))S.rounds=SEEK_ROUNDS; /* I was alone before the reload: no need to wait for anyone, just carry on */
+    setTimeout(()=>{if(S.active&&S.phase==='in'&&Object.values(S.peers).some(p=>p.audio&&p.audio.srcObject&&p.audio.paused))toast('Tap anywhere to turn on sound.',8000)},6000);
+  }catch(e){sessClear();show('landing')}
+})();
 </script>
 </body>
 </html>
