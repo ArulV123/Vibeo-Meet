@@ -964,9 +964,12 @@ const fmtT=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'
 
 /* ---------- identity: chosen name, device bans, reports ---------- */
 let USER=null,afterSignIn=null,NM=null;
+const MEMS={};
+function WNG(k){try{const o=JSON.parse(window.name||'null');return o&&o.__vb?(o[k]||null):null}catch(e){return null}}
+function WNS(k,v){try{let o=null;try{o=JSON.parse(window.name||'null')}catch(e){}if(!o||!o.__vb)o={__vb:1};if(v==null)delete o[k];else o[k]=v;window.name=JSON.stringify(o)}catch(e){}}
 const ST={
-  get:k=>{let v=null;try{v=localStorage.getItem(k)}catch(e){}if(!v){const m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)'));if(m)v=decodeURIComponent(m[1])}return v},
-  set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}document.cookie=k+'='+encodeURIComponent(v)+';max-age=315360000;path=/;SameSite=Lax'}};
+  get:k=>{let v=null;try{v=localStorage.getItem(k)}catch(e){}if(!v){try{const m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)'));if(m)v=decodeURIComponent(m[1])}catch(e){}}if(!v)v=WNG(k);if(!v)v=MEMS[k]||null;return v},
+  set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}try{document.cookie=k+'='+encodeURIComponent(v)+';max-age=315360000;path=/;SameSite=Lax'}catch(e){}WNS(k,v);MEMS[k]=v}};
 function devId(){let d=ST.get('vibeo-dev');if(!d){d=crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2)+Date.now();}ST.set('vibeo-dev',d);return d}
 function getBan(){try{return JSON.parse(ST.get('vibeo-ban')||'null')}catch(e){return null}}
 function addBan(global){const b=getBan()||{n:0,g:false};b.n++;if(global)b.g=true;b.ts=Date.now();ST.set('vibeo-ban',JSON.stringify(b))}
@@ -975,7 +978,7 @@ const gblAdd=d=>{const l=gblList();if(!l.includes(d)){l.push(d);ST.set('vibeo-gb
 const BASIC=['fuck','shit','bitch','bastard','asshole','cunt','pussy','slut','whore','nigg','faggot','retard'];
 async function nameMatcher(){
   if(NM)return NM;
-  try{const o=await import('https://cdn.jsdelivr.net/npm/obscenity@0.4/+esm');NM=new o.RegExpMatcher({...o.englishDataset.build(),...o.englishRecommendedTransformers})}
+  try{const o=await Promise.race([import('https://cdn.jsdelivr.net/npm/obscenity@0.4/+esm'),new Promise((_,r)=>setTimeout(r,3000))]);NM=new o.RegExpMatcher({...o.englishDataset.build(),...o.englishRecommendedTransformers})}
   catch(e){NM={fb:true}}
   return NM}
 async function nameCheck(n){
@@ -1823,7 +1826,7 @@ function ensureTracks(){
   S.stream.getAudioTracks().forEach(t=>t.enabled=S.micOn);S.stream.getVideoTracks().forEach(t=>t.enabled=S.camOn);
 }
 function enterMeeting(code,creator,gen){
-  resetS();S.gen=gen||1;S.code=code;S.creator=creator;S.lastCode=code;try{history.replaceState(null,'',meetLink(code))}catch(e){}sessSave();
+  clearTimeout(window._reT);resetS();showDbg('');S.gen=gen||1;S.code=code;S.creator=creator;S.lastCode=code;try{history.replaceState(null,'',meetLink(code))}catch(e){}sessSave();
   if(M.stopMeter){M.stopMeter();M.stopMeter=null}
   S.stream=M.stream||new MediaStream();M.stream=null;
   S.hasMic=M.hasMic;S.hasCam=M.hasCam;S.micOn=M.hasMic&&M.micOn;S.camOn=M.hasCam&&M.camOn;
@@ -1832,14 +1835,35 @@ function enterMeeting(code,creator,gen){
   setWait(creator?'Starting your meeting…':'Connecting…','');
   const p=S.peer=new Peer(...peerOpts(creator?'vibeo-'+code+(S.gen>1?'-'+S.gen:''):undefined));
   p.on('open',id=>{
-    if(S.opened)return;S.opened=true;window._wn=0; /* PeerJS fires 'open' again after every reconnect – that used to reset the host */
+    if(S.peer!==p||S.opened)return;S.opened=true;window._wn=0;window._pr=0; /* PeerJS fires 'open' again after every reconnect – that used to reset the host */
     if(creator){rejoinTry[code]=0;ownSet(code);S.owner=devId();S.hosts.add(id);S.order=[id];S.deskId=id;S.deskPeer=p;S.phase='in';startCall()}
     else seek(1);
   });
-  p.on('error',onPeerError);
-  p.on('connection',c=>onIncomingConn(c,false));
+  p.on('error',e=>{if(S.peer===p)onPeerError(e)});
+  p.on('connection',c=>{if(S.peer===p)onIncomingConn(c,false)});
   p.on('call',onIncomingCall);
   p.on('disconnected',()=>keepAlive(p));p.on('close',()=>{if(S.active&&S.peer===p&&S.phase==='in'&&!S.left)recover()});
+  joinWatch();
+}
+function showDbg(t){let e=$('wDbg');if(!e){e=document.createElement('div');e.id='wDbg';e.style.cssText='margin-top:14px;font-size:12px;opacity:.65';$('wSub').parentNode.appendChild(e)}e.textContent=t||''}
+function joinWatch(){
+  clearInterval(window._jw);const t0=Date.now(),tok=S.jtok=Math.random();
+  window._jw=setInterval(()=>{
+    if(!S.active||S.jtok!==tok||S.phase==='in'){clearInterval(window._jw);showDbg('');return}
+    const el=Math.round((Date.now()-t0)/1000);
+    const d=!S.opened?'connecting to the connection service':S.phase==='seek'?'looking for the meeting (slot '+S.seekGen+' of '+MAXGEN+')':S.phase==='knock'?'contacting the host':S.phase==='waiting'?'waiting for a host to let you in':'';
+    showDbg(el>=10&&d?'Still working: '+d+' · '+el+'s':'');
+    if(!S.opened&&el>=15){
+      window._pr=(window._pr||0)+1;
+      if(window._pr>3){window._pr=0;return fatal('Can’t reach the connection service. Check your network, VPN or ad-blocker and try again.')}
+      const c=S.code,own=S.creator,g=S.gen,st=keepMedia();teardown(false);M.stream=st;setWait('Reconnecting…','');enterMeeting(c,own,g);return;
+    }
+    if(S.phase==='seek'&&el>=40&&!S.forced){
+      S.forced=1;
+      if(ownGet(S.code)===devId()){const c=S.code,st=keepMedia();teardown(false);M.stream=st;setWait('Starting your meeting…','');enterMeeting(c,true,1)}
+      else askConfirm('Nobody seems to be in this meeting yet. Start it yourself and be the host?',()=>{if(!S.active||S.phase==='in')return;const c=S.code,st=keepMedia();teardown(false);M.stream=st;enterMeeting(c,true,1)},'Start it');
+    }
+  },1000);
 }
 function onPeerError(e){
   if(!S.active)return;
@@ -2039,12 +2063,13 @@ function succeed(){
 
 /* ---------- link healing: keeps everyone genuinely connected ---------- */
 const SESS='vibeo-session';
-function sessGet(){try{const v=JSON.parse(sessionStorage.getItem(SESS)||'null');return v&&Date.now()-v.ts<6e5?v:null}catch(e){return null}}
-function sessClear(){try{sessionStorage.removeItem(SESS)}catch(e){}}
+function sessGet(){try{const r=sessionStorage.getItem(SESS)||WNG(SESS);const v=r&&JSON.parse(r);return v&&Date.now()-v.ts<6e5?v:null}catch(e){try{const v=JSON.parse(WNG(SESS)||'null');return v&&Date.now()-v.ts<6e5?v:null}catch(x){return null}}}
+function sessClear(){try{sessionStorage.removeItem(SESS)}catch(e){}WNS(SESS,null)}
 function sessSave(){
   if(!S.active||!S.code||S.left)return;
   const old=sessGet(),n=S.phase==='in'?Object.keys(S.peers).length:(old&&old.code===S.code?old.n:0);
-  try{sessionStorage.setItem(SESS,JSON.stringify({code:S.code,ts:Date.now(),n,mic:!!S.micOn,cam:!!S.camOn}))}catch(e){}
+  const v=JSON.stringify({code:S.code,ts:Date.now(),n,mic:!!S.micOn,cam:!!S.camOn});
+  try{sessionStorage.setItem(SESS,v)}catch(e){}WNS(SESS,v);
 }
 function linkLost(id,conn){
   const p=S.peers[id];if(!p||p.conn!==conn||!S.active||S.closing)return;
@@ -3033,8 +3058,8 @@ document.addEventListener('keydown',e=>{
    HOST IDENTITY, RECONNECT, HISTORY, LIGHT MODE, WHITEBOARD
    ===================================================================== */
 const ownMe=()=>!!S.owner&&S.owner===devId();
-const ownGet=c=>{try{return(JSON.parse(localStorage.getItem('vibeo-own')||'{}')[c]||{}).d}catch(e){}};
-const ownSet=c=>{try{const o=JSON.parse(localStorage.getItem('vibeo-own')||'{}');o[c]={d:devId(),t:Date.now()};Object.keys(o).forEach(k=>Date.now()-o[k].t>6048e5&&delete o[k]);localStorage.setItem('vibeo-own',JSON.stringify(o))}catch(e){}};
+const ownGet=c=>{try{return(JSON.parse(ST.get('vibeo-own')||'{}')[c]||{}).d}catch(e){}};
+const ownSet=c=>{try{const o=JSON.parse(ST.get('vibeo-own')||'{}');o[c]={d:devId(),t:Date.now()};Object.keys(o).forEach(k=>Date.now()-o[k].t>6048e5&&delete o[k]);ST.set('vibeo-own',JSON.stringify(o))}catch(e){}};
 function keepMedia(){M.hasMic=S.hasMic;M.hasCam=S.hasCam;M.micOn=S.micOn;M.camOn=S.camOn;return S.stream}
 function keepAlive(p,n){if(!S.active||S.peer!==p||p.destroyed||!p.disconnected)return;if(navigator.onLine)try{p.reconnect()}catch(e){}setTimeout(()=>keepAlive(p,(n||0)+1),Math.min(8000,1500+(n||0)*1000))}
 function waitNet(why){window._wn=(window._wn||0)+1;const c=S.code,own=S.creator,st=keepMedia();teardown(false);M.stream=st;setWait('Waiting for network…',(window._wn>=2?'Can’t reach the connection service'+(why?' ('+why+')':'')+', retrying. ':'')+(own?'You’re still the host. Your meeting starts as soon as you’re back online.':'We’ll connect you as soon as you’re back online.'));const t=()=>navigator.onLine?enterMeeting(c,own):(window._reT=setTimeout(t,1500));clearTimeout(window._reT);window._reT=setTimeout(t,3000)}
