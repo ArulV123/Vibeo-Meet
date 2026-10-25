@@ -1791,7 +1791,7 @@ $('devClose').onclick=()=>{micTestStop();camTestStop();$('devModal').classList.a
 /* =====================================================================
    MEETING ENGINE
    ===================================================================== */
-const MAXGEN=16;let SEEK_ROUNDS=2; /* how many extra full scans a returning host does before starting a brand-new (empty) meeting */
+const MAXGEN=16;let SEEK_ROUNDS=1; /* how many extra full scans a returning host does before starting a brand-new (empty) meeting */
 const S={active:false,phase:'',peers:{},hosts:new Set(),settings:{},lobby:{},lobbyV:[],timers:[]};
 const opus=sdp=>sdp.replace(/(a=fmtp:\d+ [^\r\n]*minptime=10[^\r\n]*)/g,l=>/usedtx/.test(l)?l:l+';usedtx=1;useinbandfec=1;stereo=0;sprop-stereo=0;maxaveragebitrate=40000');
 function resetS(){
@@ -1822,17 +1822,17 @@ function ensureTracks(){
   if(!S.stream.getVideoTracks().length){S.stream.addTrack(dummyVideo());S.dummyV=true}
   S.stream.getAudioTracks().forEach(t=>t.enabled=S.micOn);S.stream.getVideoTracks().forEach(t=>t.enabled=S.camOn);
 }
-function enterMeeting(code,creator){
-  resetS();S.code=code;S.creator=creator;S.lastCode=code;try{history.replaceState(null,'',meetLink(code))}catch(e){}sessSave();
+function enterMeeting(code,creator,gen){
+  resetS();S.gen=gen||1;S.code=code;S.creator=creator;S.lastCode=code;try{history.replaceState(null,'',meetLink(code))}catch(e){}sessSave();
   if(M.stopMeter){M.stopMeter();M.stopMeter=null}
   S.stream=M.stream||new MediaStream();M.stream=null;
   S.hasMic=M.hasMic;S.hasCam=M.hasCam;S.micOn=M.hasMic&&M.micOn;S.camOn=M.hasCam&&M.camOn;
   ensureTracks();
   const c=navigator.connection;if(c&&(c.saveData||/2g/.test(c.effectiveType||'')))S.tier=2;
   setWait(creator?'Starting your meeting…':'Connecting…','');
-  const p=S.peer=new Peer(...peerOpts(creator?'vibeo-'+code:undefined));
+  const p=S.peer=new Peer(...peerOpts(creator?'vibeo-'+code+(S.gen>1?'-'+S.gen:''):undefined));
   p.on('open',id=>{
-    if(S.opened)return;S.opened=true; /* PeerJS fires 'open' again after every reconnect – that used to reset the host */
+    if(S.opened)return;S.opened=true;window._wn=0; /* PeerJS fires 'open' again after every reconnect – that used to reset the host */
     if(creator){rejoinTry[code]=0;ownSet(code);S.owner=devId();S.hosts.add(id);S.order=[id];S.deskId=id;S.deskPeer=p;S.phase='in';startCall()}
     else seek(1);
   });
@@ -1851,12 +1851,14 @@ function onPeerError(e){
     }else{setWait('Waiting for the host to start…','Keep this page open. You’ll be taken in automatically once the host starts the meeting.');clearTimeout(window._reT);window._reT=setTimeout(()=>{if(S.active&&S.phase==='seek')seek(1)},4000)}}
     return;
   }
-  if(S.phase!=='in'&&/^(network|server-error|socket-error|socket-closed)$/.test(e.type))return waitNet();
+  if(S.phase!=='in'&&/^(network|server-error|socket-error|socket-closed)$/.test(e.type))return waitNet(e.type);
   if(e.type==='unavailable-id'&&S.creator&&S.phase!=='in'){
-    const s=S.stream,code=S.code;
+    const s=S.stream,code=S.code,g0=S.gen||1;
     if(S.dummyV)s.getVideoTracks().forEach(t=>{s.removeTrack(t);try{t.stop()}catch(x){}});
     if(S.dummyA)s.getAudioTracks().forEach(t=>{s.removeTrack(t);try{t.stop()}catch(x){}});
     teardown(false);M.stream=s;
+    /* my old meeting id is still held by the server (stale) – don't wait for it, start the meeting on the next free id; guests scan all of them */
+    if(ownGet(code)===devId()&&g0<MAXGEN){setWait('Starting your meeting…','');clearTimeout(window._reT);window._reT=setTimeout(()=>enterMeeting(code,true,g0+1),300);return}
     if(LATER.has(code)||ownGet(code)===devId()){
       // a scheduled meeting: the old host id may still be released by the server – retry as host, then fall back to joining
       const n=rejoinTry[code]||0;
@@ -1877,7 +1879,7 @@ function seek(g){
   c.on('open',async()=>{S.phase='knock';c.send({t:'knock',name:USER.email,dev:devId(),gban:getBan()})});
   c.on('data',onKnockMsg);
   c.on('close',()=>{if(S.active&&S.phase==='waiting')fatal('The host left before letting you in.')});
-  setTimeout(()=>{if(S.active&&S.knock===c&&S.phase==='seek'&&!c.open){try{c.close()}catch(e){}onPeerError({type:'peer-unavailable'})}},6000);
+  setTimeout(()=>{if(S.active&&S.knock===c&&S.phase==='seek'&&!c.open){try{c.close()}catch(e){}onPeerError({type:'peer-unavailable'})}},4000);
   setTimeout(()=>{if(S.active&&S.knock===c&&S.phase==='knock'){try{c.close()}catch(e){}S.phase='seek';onPeerError({type:'peer-unavailable'})}},12000);
 }
 function onKnockMsg(m){
@@ -3035,7 +3037,7 @@ const ownGet=c=>{try{return(JSON.parse(localStorage.getItem('vibeo-own')||'{}')[
 const ownSet=c=>{try{const o=JSON.parse(localStorage.getItem('vibeo-own')||'{}');o[c]={d:devId(),t:Date.now()};Object.keys(o).forEach(k=>Date.now()-o[k].t>6048e5&&delete o[k]);localStorage.setItem('vibeo-own',JSON.stringify(o))}catch(e){}};
 function keepMedia(){M.hasMic=S.hasMic;M.hasCam=S.hasCam;M.micOn=S.micOn;M.camOn=S.camOn;return S.stream}
 function keepAlive(p,n){if(!S.active||S.peer!==p||p.destroyed||!p.disconnected)return;if(navigator.onLine)try{p.reconnect()}catch(e){}setTimeout(()=>keepAlive(p,(n||0)+1),Math.min(8000,1500+(n||0)*1000))}
-function waitNet(){const c=S.code,own=S.creator,st=keepMedia();teardown(false);M.stream=st;setWait('Waiting for network…',own?'You’re still the host. Your meeting starts as soon as you’re back online.':'We’ll connect you as soon as you’re back online.');const t=()=>navigator.onLine?enterMeeting(c,own):(window._reT=setTimeout(t,1500));clearTimeout(window._reT);window._reT=setTimeout(t,3000)}
+function waitNet(why){window._wn=(window._wn||0)+1;const c=S.code,own=S.creator,st=keepMedia();teardown(false);M.stream=st;setWait('Waiting for network…',(window._wn>=2?'Can’t reach the connection service'+(why?' ('+why+')':'')+', retrying. ':'')+(own?'You’re still the host. Your meeting starts as soon as you’re back online.':'We’ll connect you as soon as you’re back online.'));const t=()=>navigator.onLine?enterMeeting(c,own):(window._reT=setTimeout(t,1500));clearTimeout(window._reT);window._reT=setTimeout(t,3000)}
 function recover(){if(!S.active||S.left)return;const c=S.code,st=keepMedia();teardown(false);M.stream=st;setWait('Connection lost','Rejoining your meeting…'+(ownGet(c)===devId()?' You’ll be the host again.':''));const t=()=>navigator.onLine?enterMeeting(c,false):(window._reT=setTimeout(t,1500));clearTimeout(window._reT);window._reT=setTimeout(t,2000)}
 
 /* ---------- 7-day meeting history (stored on this device) ---------- */
